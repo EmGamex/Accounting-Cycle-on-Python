@@ -105,3 +105,13 @@ class GestorLibroDiario:
                 if termino == l.codigo.lower() or termino in l.nombre.lower():
                     resultados.append((p, l))
         return resultados
+
+    def guardar_json(self, ruta_archivo: str) -> None:
+        """Persiste el libro actual en formato JSON."""
+        from .storage import guardar_libro_json
+        guardar_libro_json(self.libro, ruta_archivo)
+
+    def cargar_json(self, ruta_archivo: str) -> None:
+        """Carga y reemplaza las partidas actuales con las de un archivo JSON."""
+        from .storage import cargar_libro_json
+        self.libro = cargar_libro_json(ruta_archivo)

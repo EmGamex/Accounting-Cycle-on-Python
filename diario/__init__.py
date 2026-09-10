@@ -29,6 +29,10 @@ from .reportes import (
     generar_texto_libro_diario,
     generar_texto_partida,
 )
+from .storage import (
+    cargar_libro_json,
+    guardar_libro_json,
+)
 
 __all__ = [
     "iniciar_flujo_diario",
@@ -54,4 +58,6 @@ __all__ = [
     "de_partida_planilla",
     "generar_texto_libro_diario",
     "generar_texto_partida",
+    "guardar_libro_json",
+    "cargar_libro_json",
 ]

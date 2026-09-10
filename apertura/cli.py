@@ -1,11 +1,11 @@
 """Capa de presentación e interacción de consola para el sistema de apertura contable."""
 from decimal import Decimal, InvalidOperation
 import sys
-from typing import Optional
+from typing import Optional, Tuple
 
 from apertura.catalogo import CatalogoService
 from apertura.contabilidad import MotorApertura
-from apertura.models import CuentaCatalogo
+from apertura.models import CuentaCatalogo, PartidaApertura, ResumenBalance
 from apertura.reportes import exportar_reporte, generar_texto_balance, generar_texto_partida
 
 
@@ -80,8 +80,12 @@ def seleccionar_cuenta_interactiva(catalogo: CatalogoService, entrada: str) -> O
         print(f"   (!) Ingrese un número entre 1 y {limite}.")
 
 
-def iniciar_flujo_apertura() -> None:
-    """Punto de entrada interactivo principal."""
+def iniciar_flujo_apertura(
+    numero_partida: int = 1,
+    exportar_archivo: bool = True,
+    imprimir_reportes: bool = True,
+) -> Tuple[Optional[ResumenBalance], Optional[PartidaApertura]]:
+    """Punto de entrada interactivo principal. Retorna (ResumenBalance, PartidaApertura) o (None, None)."""
     print("=" * 75)
     print("      SISTEMA DE APERTURA CONTABLE: BALANCE Y PARTIDA DE DIARIO")
     print("=" * 75)
@@ -94,7 +98,7 @@ def iniciar_flujo_apertura() -> None:
         catalogo = CatalogoService.desde_modulo()
     except RuntimeError as e:
         print(f"\n[ERROR] {e}")
-        return
+        return None, None
 
     motor = MotorApertura()
 
@@ -135,7 +139,7 @@ def iniciar_flujo_apertura() -> None:
 
     if not motor.items:
         print("\nNo se registraron cuentas. Saliendo del programa.")
-        return
+        return None, None
 
     # Cálculo del balance
     resumen = motor.calcular_balance()
@@ -165,14 +169,18 @@ def iniciar_flujo_apertura() -> None:
             )
 
     # Generar reportes
-    partida = motor.generar_partida_apertura()
+    partida = motor.generar_partida_apertura(numero=numero_partida)
 
-    print("\n" + generar_texto_balance(resumen))
-    print(generar_texto_partida(partida))
+    if imprimir_reportes:
+        print("\n" + generar_texto_balance(resumen))
+        print(generar_texto_partida(partida))
 
-    # Preguntar si se desea exportar a archivo
-    exportar = input("¿Deseas guardar estos reportes en un archivo de texto? (s/n) [n]: ").strip().lower()
-    if exportar in ("s", "si", "y", "yes"):
-        nombre_arch = input("Nombre de archivo [apertura_contable.txt]: ").strip() or "apertura_contable.txt"
-        ruta_completa = exportar_reporte(resumen, partida, nombre_arch)
-        print(f"   [OK] Reporte exportado exitosamente en:\n        {ruta_completa}\n")
+    # Preguntar si se desea exportar a archivo si está habilitado
+    if exportar_archivo:
+        exportar = input("¿Deseas guardar estos reportes en un archivo de texto? (s/n) [n]: ").strip().lower()
+        if exportar in ("s", "si", "y", "yes"):
+            nombre_arch = input("Nombre de archivo [apertura_contable.txt]: ").strip() or "apertura_contable.txt"
+            ruta_completa = exportar_reporte(resumen, partida, nombre_arch)
+            print(f"   [OK] Reporte exportado exitosamente en:\n        {ruta_completa}\n")
+
+    return resumen, partida

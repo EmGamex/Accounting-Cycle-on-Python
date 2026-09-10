@@ -2,6 +2,7 @@
 from decimal import Decimal
 import os
 import unittest
+from unittest.mock import patch
 
 from apertura import (
     CatalogoService,
@@ -155,6 +156,24 @@ class TestAperturaContable(unittest.TestCase):
             if os.path.exists(ruta_test):
                 os.remove(ruta_test)
 
+    @patch("builtins.input", side_effect=[
+        "1101",
+        "8000.00",
+        "fin",
+        "s",  # Cuadrar con capital
+        "n",  # No exportar a txt
+    ])
+    def test_iniciar_flujo_apertura_retorno(self, mock_input):
+        """Verifica que iniciar_flujo_apertura retorne correctamente resumen y partida."""
+        from apertura.cli import iniciar_flujo_apertura
+        resumen, partida = iniciar_flujo_apertura(numero_partida=3, exportar_archivo=True)
+        self.assertIsNotNone(resumen)
+        self.assertIsNotNone(partida)
+        self.assertEqual(partida.numero, 3)
+        self.assertTrue(partida.cuadra)
+        self.assertEqual(partida.total_debe, Decimal("8000.00"))
+
 
 if __name__ == "__main__":
     unittest.main()
+

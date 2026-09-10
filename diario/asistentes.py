@@ -2,7 +2,7 @@
 from decimal import Decimal
 from typing import Optional
 
-from apertura import CatalogoService, MotorApertura
+from apertura import CatalogoService, MotorApertura, iniciar_flujo_apertura
 from planilla import DatosEmpleado, calcular_boleta, generar_partida_contable
 from diario.conectores import de_partida_apertura, de_partida_planilla
 from diario.engine import GestorLibroDiario
@@ -31,10 +31,9 @@ def registrar_apertura_asistida(gestor: GestorLibroDiario) -> Optional[PartidaDi
     print("  [2] Ingresar saldos iniciales cuenta por cuenta")
     opcion = input("\nSeleccione [1]: ").strip() or "1"
 
-    cat = CatalogoService.desde_modulo()
-    motor_ap = MotorApertura()
-
     if opcion == "1":
+        cat = CatalogoService.desde_modulo()
+        motor_ap = MotorApertura()
         for cod, monto in [
             ("1101", Decimal("10000.00")),  # Caja General
             ("1102", Decimal("45000.00")),  # Bancos
@@ -49,28 +48,21 @@ def registrar_apertura_asistida(gestor: GestorLibroDiario) -> Optional[PartidaDi
         cta_capital = cat.buscar("3101")
         if cta_capital:
             motor_ap.asignar_diferencia_capital(cta_capital, res.diferencia_capital)
+
+        fecha = pedir_fecha("Fecha del asiento de apertura [Hoy]: ")
+        pda_ap = motor_ap.generar_partida_apertura(numero=gestor.siguiente_numero)
     else:
-        print("  Ingrese las cuentas de apertura (escriba 'fin' para terminar):")
-        while True:
-            cta_txt = input("\nCuenta o código ('fin' para calcular capital): ").strip()
-            if cta_txt.lower() == "fin":
-                break
-            cta = cat.buscar(cta_txt)
-            if not cta:
-                print("  (!) Cuenta no reconocida en catálogo.")
-                continue
-            monto = pedir_monto(f"  Saldo para {cta.nombre}: ")
-            motor_ap.agregar_o_acumular(cta, monto)
+        # Usa el flujo completo e interactivo de apertura-cuentas (con ver, eliminar, clasificar, etc.)
+        _, pda_ap = iniciar_flujo_apertura(
+            numero_partida=gestor.siguiente_numero,
+            exportar_archivo=False,
+            imprimir_reportes=True,
+        )
+        if not pda_ap:
+            print("\n  [!] Apertura cancelada o sin cuentas registradas.")
+            return None
+        fecha = pedir_fecha("\nFecha del asiento de apertura en el Libro Diario [Hoy]: ")
 
-        res = motor_ap.calcular_balance()
-        print(f"\n  Total Activo: Q {res.total_activo:,.2f} | Pasivo: Q {res.total_pasivo:,.2f}")
-        print(f"  Diferencia calculada de Capital: Q {res.diferencia_capital:,.2f}")
-        cta_capital = cat.buscar("3101")
-        if cta_capital:
-            motor_ap.asignar_diferencia_capital(cta_capital, res.diferencia_capital)
-
-    fecha = pedir_fecha("Fecha del asiento de apertura [Hoy]: ")
-    pda_ap = motor_ap.generar_partida_apertura(numero=gestor.siguiente_numero)
     partida_diario = de_partida_apertura(pda_ap, fecha=fecha, numero=gestor.siguiente_numero)
 
     try:

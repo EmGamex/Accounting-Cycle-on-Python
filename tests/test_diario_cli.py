@@ -75,6 +75,32 @@ class TestDiarioCliYAsistentes(unittest.TestCase):
         self.assertEqual(partida.numero, 1)
         self.assertTrue(partida.cuadra)
 
+    @patch("builtins.input", side_effect=[
+        "2",          # Subopción 2 (manual con flujo de apertura)
+        "1101",       # Cuenta Caja
+        "5000.00",    # Monto Caja
+        "fin",        # Fin de ingreso de cuentas
+        "s",          # Asignar diferencia a Capital
+        "",           # Fecha default hoy
+    ])
+    def test_registrar_apertura_asistida_con_flujo_completo_apertura(self, mock_input):
+        gestor = GestorLibroDiario(estricto_cronologico=False)
+        partida = registrar_apertura_asistida(gestor)
+        self.assertIsNotNone(partida)
+        self.assertEqual(len(gestor.libro.partidas), 1)
+        self.assertEqual(partida.numero, 1)
+        self.assertTrue(partida.cuadra)
+        # Debe tener Caja y Capital Cuadrados en 5000.00
+        self.assertEqual(partida.total_debe, Decimal("5000.00"))
+        self.assertEqual(partida.total_haber, Decimal("5000.00"))
+
+    @patch("builtins.input", side_effect=["99", "0"])
+    def test_iniciar_flujo_diario_opcion_invalida(self, mock_input):
+        gestor = GestorLibroDiario(estricto_cronologico=False)
+        iniciar_flujo_diario(gestor)
+        self.assertEqual(len(gestor.libro.partidas), 0)
+
 
 if __name__ == "__main__":
     unittest.main()
+

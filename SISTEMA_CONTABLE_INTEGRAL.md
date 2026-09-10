@@ -325,4 +325,4 @@ flowchart LR
 * **Fase 4:**
   - [ ] Implementar los exportadores a Excel (`openpyxl`) para generar el libro maestro de 6 hojas listo para impresión y entrega legal.
 * **Fase 5:**
-  - [ ] Menú de consola amigable e interactivo (`main.py`) que permita operar todo el flujo con 1 solo comando.
+  - [x] Menú de consola amigable e interactivo (`main.py`) que permita operar todo el flujo con 1 solo comando.
