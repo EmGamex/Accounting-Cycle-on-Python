@@ -1,0 +1,56 @@
+===========================================================================
+                    BALANCE DE SITUACIÓN GENERAL DE APERTURA
+===========================================================================
+
+1. ACTIVO
+  1.1 Activo Corriente:
+        [1102] Bancos (Moneda Nacional)                Q     175,000.00
+        [1104] Inventario de Mercancías                Q      75,000.00
+        [1103] Cuentas por Cobrar Clientes             Q      25,000.00
+    Subtotal 1.1 Activo Corriente                      Q     275,000.00
+  1.2 Activo No Corriente:
+        [1204] Mobiliario y Equipo de Oficina          Q      25,000.00
+    Subtotal 1.2 Activo No Corriente                   Q      25,000.00
+  ---------------------------------------------------------------------
+  TOTAL 1. ACTIVO                                      Q     300,000.00
+
+2. PASIVO
+  2.1 Pasivo Corriente:
+        [2101] Proveedores Locales                     Q      50,000.00
+    Subtotal 2.1 Pasivo Corriente                      Q      50,000.00
+  2.2 Pasivo No Corriente:
+        [2202] Préstamos Bancarios a Largo Plazo       Q      50,000.00
+    Subtotal 2.2 Pasivo No Corriente                   Q      50,000.00
+  ---------------------------------------------------------------------
+  TOTAL 2. PASIVO                                      Q     100,000.00
+
+3. CAPITAL / PATRIMONIO
+  3.1 Capital Contable:
+        [3101] Capital Social                          Q     200,000.00
+    Subtotal 3.1 Capital Contable                      Q     200,000.00
+  ---------------------------------------------------------------------
+  TOTAL 3. CAPITAL / PATRIMONIO                        Q     200,000.00
+
+===========================================================================
+TOTAL ACTIVO:                                          Q     300,000.00
+TOTAL PASIVO Y PATRIMONIO:                             Q     300,000.00
+===========================================================================
+Estado: CUADRADO EXACTO (Activo = Pasivo + Patrimonio)
+
+
+===========================================================================
+           PARTIDA DE DIARIO NO. 1 (ASIENTO DE APERTURA)
+===========================================================================
+CÓDIGO   CUENTA                                       DEBE (Q)    HABER (Q)
+---------------------------------------------------------------------------
+1102     Bancos (Moneda Nacional)                   175,000.00             
+1104     Inventario de Mercancías                    75,000.00             
+1103     Cuentas por Cobrar Clientes                 25,000.00             
+1204     Mobiliario y Equipo de Oficina              25,000.00             
+2101       a: Proveedores Locales                                   50,000.00
+2202       a: Préstamos Bancarios a Largo Plazo                     50,000.00
+3101       a: Capital Social                                       200,000.00
+---------------------------------------------------------------------------
+SUMAS IGUALES:                                    Q 300,000.00 Q 300,000.00
+---------------------------------------------------------------------------
+Razón: Registro de valores iniciales al inicio de operaciones.
