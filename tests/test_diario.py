@@ -14,7 +14,12 @@ from diario import (
     MovimientoLinea,
     PartidaDiario,
     TipoOrigenPartida,
+    crear_partida_abono_cliente,
+    crear_partida_abono_prestamo,
+    crear_partida_abono_proveedor,
     crear_partida_compra,
+    crear_partida_deposito_banco,
+    crear_partida_retiro_banco,
     crear_partida_simple,
     crear_partida_venta,
     de_partida_apertura,
@@ -345,6 +350,73 @@ class TestOperacionesComercialesYReportes(unittest.TestCase):
         self.assertIn("LIBRO DIARIO DE OPERACIONES", texto_libro)
         self.assertIn("RESUMEN GENERAL DEL LIBRO DIARIO", texto_libro)
         self.assertIn("CUADRE EXACTO", texto_libro)
+
+    def test_operaciones_frecuentes_helpers(self):
+        """Verifica los generadores de alto nivel para cobros, pagos, depósitos y préstamos."""
+        # 1. Abono de cliente en efectivo (Caso 11: Q 7,000)
+        p1 = crear_partida_abono_cliente(
+            numero=1,
+            fecha=date(2026, 1, 15),
+            monto=Decimal("7000.00"),
+            medio="caja",
+        )
+        self.assertTrue(p1.cuadra)
+        self.assertEqual(p1.lineas[0].codigo, "1101")  # Caja General
+        self.assertEqual(p1.lineas[1].codigo, "1103")  # Clientes
+        self.assertEqual(p1.total_debe, Decimal("7000.00"))
+        self.gestor.registrar_partida(p1)
+
+        # 2. Abono a proveedor con cheque (Caso 9: Q 8,000)
+        p2 = crear_partida_abono_proveedor(
+            numero=2,
+            fecha=date(2026, 1, 16),
+            monto=Decimal("8000.00"),
+            medio="banco",
+            documento_soporte="Ch.",
+        )
+        self.assertTrue(p2.cuadra)
+        self.assertEqual(p2.lineas[0].codigo, "2101")  # Proveedores
+        self.assertEqual(p2.lineas[1].codigo, "1102")  # Bancos
+        self.assertEqual(p2.total_debe, Decimal("8000.00"))
+        self.gestor.registrar_partida(p2)
+
+        # 3. Abono a préstamo bancario (Caso 10: Q 12,000)
+        p3 = crear_partida_abono_prestamo(
+            numero=3,
+            fecha=date(2026, 1, 17),
+            monto=Decimal("12000.00"),
+            documento_soporte="TRF-901",
+        )
+        self.assertTrue(p3.cuadra)
+        self.assertEqual(p3.lineas[0].codigo, "2202")  # Préstamos Bancarios
+        self.assertEqual(p3.lineas[1].codigo, "1102")  # Bancos
+        self.assertEqual(p3.total_debe, Decimal("12000.00"))
+        self.gestor.registrar_partida(p3)
+
+        # 4. Depósito bancario de efectivo
+        p4 = crear_partida_deposito_banco(
+            numero=4,
+            fecha=date(2026, 1, 18),
+            monto=Decimal("5000.00"),
+        )
+        self.assertTrue(p4.cuadra)
+        self.assertEqual(p4.lineas[0].codigo, "1102")  # Bancos
+        self.assertEqual(p4.lineas[1].codigo, "1101")  # Caja
+        self.gestor.registrar_partida(p4)
+
+        # 5. Retiro de banco a caja
+        p5 = crear_partida_retiro_banco(
+            numero=5,
+            fecha=date(2026, 1, 19),
+            monto=Decimal("2000.00"),
+        )
+        self.assertTrue(p5.cuadra)
+        self.assertEqual(p5.lineas[0].codigo, "1101")  # Caja
+        self.assertEqual(p5.lineas[1].codigo, "1102")  # Bancos
+        self.gestor.registrar_partida(p5)
+
+        self.assertEqual(len(self.gestor.libro.partidas), 5)
+        self.assertTrue(self.gestor.libro.cuadra)
 
 
 if __name__ == "__main__":
