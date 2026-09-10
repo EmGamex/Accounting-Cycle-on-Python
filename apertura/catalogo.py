@@ -166,6 +166,59 @@ class CatalogoService:
 
         return None
 
+    def buscar_coincidencias(self, texto_usuario: str) -> List[CuentaCatalogo]:
+        """Busca todas las cuentas que coincidan por código o nombre para selección interactiva."""
+        texto_limpio = texto_usuario.strip()
+        if not texto_limpio:
+            return []
+
+        # 1. Búsqueda exacta por código
+        if texto_limpio in self._por_codigo:
+            return [self._por_codigo[texto_limpio]]
+
+        texto_norm = normalizar(texto_limpio)
+        termino = SINONIMOS.get(texto_norm, texto_norm)
+
+        coincidencias: List[CuentaCatalogo] = []
+        codigos_vistos = set()
+
+        def agregar(c: CuentaCatalogo):
+            if c.codigo not in codigos_vistos:
+                codigos_vistos.add(c.codigo)
+                coincidencias.append(c)
+
+        # 2. Coincidencia exacta por nombre normalizado o sinónimo
+        if texto_norm in self._por_nombre_norm:
+            agregar(self._por_nombre_norm[texto_norm])
+        if termino in self._por_nombre_norm:
+            agregar(self._por_nombre_norm[termino])
+
+        # 3. Subcadena en código o nombre
+        termino_lower = texto_limpio.lower()
+        for c in self._cuentas:
+            if (
+                termino_lower in c.codigo.lower()
+                or termino in c.nombre_norm
+                or texto_norm in c.nombre_norm
+            ):
+                agregar(c)
+
+        # 4. Palabras contenidas
+        palabras = termino.split()
+        if len(palabras) > 1:
+            for c in self._cuentas:
+                if all(p in c.nombre_norm for p in palabras):
+                    agregar(c)
+
+        # 5. Similitud difusa con difflib si no hay coincidencias directas
+        if not coincidencias:
+            cercanas = difflib.get_close_matches(termino, self._nombres_norm, n=5, cutoff=0.50)
+            for nombre_cercano in cercanas:
+                if nombre_cercano in self._por_nombre_norm:
+                    agregar(self._por_nombre_norm[nombre_cercano])
+
+        return coincidencias
+
     def obtener_cuenta_capital(self) -> CuentaCatalogo:
         """Localiza la cuenta de capital en el catálogo o retorna una cuenta base estándar."""
         posibles_nombres = ["capital social", "capital contable", "capital", "patrimonio"]

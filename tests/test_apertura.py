@@ -52,6 +52,20 @@ class TestAperturaContable(unittest.TestCase):
         self.assertIsNotNone(cta_vehiculo)
         self.assertEqual(cta_vehiculo.nombre, "Vehículos")
 
+    def test_buscar_coincidencias_multiples(self):
+        """Verifica que buscar_coincidencias retorne todas las cuentas relevantes para selección interactiva."""
+        coincidencias = self.catalogo.buscar_coincidencias("depreciacion")
+        self.assertGreater(len(coincidencias), 1)
+        # Verificar que incluya subcuentas específicas
+        codigos = [c.codigo for c in coincidencias]
+        self.assertIn("1205", codigos)
+        self.assertIn("1205-01", codigos)
+
+        # Búsqueda por código exacto debe retornar 1 sola
+        exacta = self.catalogo.buscar_coincidencias("1101")
+        self.assertEqual(len(exacta), 1)
+        self.assertEqual(exacta[0].nombre, "Caja General")
+
     def test_acumulacion_y_eliminacion_de_cuentas(self):
         """Verifica que montos sobre la misma cuenta se acumulen y se puedan eliminar."""
         cta = self.catalogo.buscar("1101")  # Caja General
