@@ -62,6 +62,7 @@ class CatalogoService:
     @classmethod
     def desde_modulo(cls) -> "CatalogoService":
         """Carga e indexa el catálogo importando dinámicamente el módulo disponible."""
+        dict_catalogo = None
         try:
             modulo = importlib.import_module("catalogo_contable")
             if hasattr(modulo, "catalogo_cuentas"):
