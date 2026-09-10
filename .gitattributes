@@ -1,4 +1,4 @@
-﻿# Normalización automática de finales de línea por defecto
+# Normalización automática de finales de línea por defecto
 * text=auto eol=lf
 
 # Archivos de código y documentación en texto plano (forzar LF y UTF-8)
