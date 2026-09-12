@@ -7,6 +7,7 @@ from planilla.cli import iniciar_flujo_planillas
 from diario.cli import iniciar_flujo_diario
 from diario.conectores import de_partida_apertura, de_partida_planilla
 from diario.engine import GestorLibroDiario
+from mayor.cli import iniciar_flujo_mayor
 
 # Constantes de configuración y presentación
 ARCHIVO_EJERCICIO_DEFAULT = "libro_diario.json"
@@ -189,6 +190,10 @@ def _obtener_acciones_principales(gestor: GestorLibroDiario) -> list[AccionMenu]
         AccionMenu(
             "Sistema de Libro Diario (Registro de Operaciones Diarias)",
             lambda: iniciar_flujo_diario(gestor=gestor),
+        ),
+        AccionMenu(
+            "Sistema de Libro Mayor y T-Gráficas (Pases y Saldos)",
+            lambda: iniciar_flujo_mayor(gestor_diario=gestor),
         ),
         AccionMenu(
             "Guardar / Cargar Ejercicio Contable (Persistencia JSON)",

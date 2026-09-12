@@ -57,10 +57,18 @@ class TestMainOrquestador(unittest.TestCase):
         salida = mock_stdout.getvalue()
         self.assertIn("Retornando al menú principal", salida)
 
-    @patch("main.menu_persistencia")
+    @patch("main.iniciar_flujo_mayor")
     @patch("builtins.input", side_effect=["4", "0"])
+    def test_invocacion_mayor(self, mock_input, mock_mayor):
+        """Verifica que la opción 4 invoque el módulo de libro mayor pasando el gestor."""
+        menu_principal()
+        mock_mayor.assert_called_once()
+        self.assertIn("gestor_diario", mock_mayor.call_args.kwargs)
+
+    @patch("main.menu_persistencia")
+    @patch("builtins.input", side_effect=["5", "0"])
     def test_invocacion_persistencia(self, mock_input, mock_persistencia):
-        """Verifica que la opción 4 invoque el submenú de persistencia."""
+        """Verifica que la opción 5 invoque el submenú de persistencia."""
         menu_principal()
         mock_persistencia.assert_called_once()
 
