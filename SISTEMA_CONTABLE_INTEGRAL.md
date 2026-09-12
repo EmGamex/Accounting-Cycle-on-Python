@@ -231,18 +231,33 @@ flowchart TB
 │   ├── contabilidad.py             # Generador de la partida contable de nómina
 │   └── io_handlers.py              # E/S consola, CSV y boletas
 │
-├── diario/                         # [Módulo 2] NUEVO - Motor del Libro Diario
+├── diario/                         # [Módulo 2] Motor del Libro Diario
 │   ├── models.py                   # PartidaDiario, MovimientoLinea, LibroDiarioModel
 │   ├── engine.py                   # Gestor de partidas, correlativos y validación doble
-│   └── conectores.py               # Transforma Apertura y Planilla en PartidaDiario
+│   ├── conectores.py               # Transforma Apertura y Planilla en PartidaDiario
+│   ├── asistentes/                 # Asistentes interactivos de registro (comercial, tesorería, etc.)
+│   └── cli.py                      # Interfaz de consola para Libro Diario
 │
-├── mayor/                          # [Módulo 3] NUEVO - Motor del Libro Mayor
-│   ├── models.py                   # CuentaMayor, MovimientoT, ResumenMayor
-│   └── engine.py                   # Agrupa Diario por cuenta, genera T-Gráficas y saldos
+├── mayor/                          # [Módulo 3] Motor del Libro Mayor y T-Gráficas
+│   ├── models.py                   # CuentaMayor, MovimientoMayor, LibroMayor, NaturalezaSaldo
+│   ├── engine.py                   # Agrupa Diario por cuenta, genera T-Gráficas y saldos
+│   ├── exceptions.py               # Excepciones específicas del mayor
+│   └── cli.py                      # Menú interactivo y vistas Rich de T-Gráficas y Mayor formal
 │
-├── balance/                        # [Módulo 4 y 1-Cierre] NUEVO - Balance de Comprobación
+├── balance/                        # [Módulo 4 y 1-Cierre] Balance de Comprobación
 │   ├── models.py                   # FilaBalance4Columnas, BalanceComprobacionModel
 │   └── engine.py                   # Genera las 4 columnas y el Balance General final
+│
+├── ui/                             # Capa unificada de interfaz y presentación Rich (Termux-friendly)
+│   ├── consola.py                  # Consola global, formato de moneda, banners, alertas
+│   ├── tablas.py                   # Generador de tablas Rich (partidas, T-gráficas, mayor, balances)
+│   ├── arbol.py                    # Visualizador jerárquico del catálogo con Tree
+│   └── temas.py                    # Paleta de colores, badges y bordes (incluye BORDE_T_GRAFICA)
+│
+├── persistencia/                   # Módulo de almacenamiento y persistencia del ejercicio
+│   ├── models.py                   # Modelos serializables de datos
+│   ├── serializadores.py           # Serialización / deserialización JSON con Decimal y date
+│   └── storage.py                  # Gestor de persistencia en disco
 │
 ├── exportadores/                   # Motor de Salida en Excel y Reportes
 │   ├── excel_diario.py             # Formato Libro Diario a 2 columnas
@@ -250,7 +265,8 @@ flowchart TB
 │   ├── excel_balance.py            # Formato Balance de 4 Columnas
 │   └── excel_master.py             # Generador del Workbook maestro con todas las hojas
 │
-├── main.py                         # Menú unificado del Sistema Contable
+├── orquestador.py                  # Orquestador del flujo integral del ejercicio
+├── main.py                         # Menú unificado de entrada al Sistema Contable
 └── tests/                          # Suite de pruebas automatizadas (pytest)
 ```
 
@@ -313,13 +329,15 @@ Para asegurar una presentación financiera legible, profesional y adaptativa tan
 
 ### 6.2. Directrices de Diseño y Ergonomía para Termux (Móviles)
 1. **Ancho Responsivo Dinámico (`console.width`):**  
-   En dispositivos móviles bajo Termux, la pantalla suele variar entre 40 y 80 columnas según el tamaño de fuente y orientación. Las vistas deben adaptarse automáticamente al ancho real de la consola mediante `rich`, eliminando constantes rígidas que provoquen saltos de línea antiestéticos.
+   En dispositivos móviles bajo Termux, la pantalla suele variar entre 40 y 80 columnas según el tamaño de fuente y orientación. Las vistas se adaptan automáticamente al ancho real de la consola mediante `rich`, evitando saltos de línea antiestéticos o líneas rígidas manuales.
 2. **Bordes y Padding Compactos:**  
-   Uso preferente de estilos de caja compactos (`box.ROUNDED` o `box.SIMPLE`) y espaciado mínimo de celdas (`padding=(0, 1)`) para optimizar el área horizontal útil en pantallas pequeñas.
-3. **Ergonomía de Entrada de Datos (Evitar TUI de pantalla completa):**  
+   Uso de estilos de caja adaptativos (`box.ROUNDED` o `box.SIMPLE`) y espaciado mínimo de celdas (`padding=(0, 1)`). Para las T-Gráficas se diseñó `BORDE_T_GRAFICA` (`ui.temas`), que preserva el aspecto clásico de T contable (sin bordes laterales exteriores cerrados) con ajuste dinámico de columnas.
+3. **Ausencia de `print()` Nativos:**  
+   Se estandariza toda la salida a través de `ui.console.print` o utilidades semánticas (`imprimir_banner`, `imprimir_alerta`, `imprimir_exito`, `imprimir_aviso`), garantizando compatibilidad de codificación y soporte de estilos en cualquier emulador de terminal.
+4. **Ergonomía de Entrada de Datos (Evitar TUI de pantalla completa):**  
    Se descartan interfaces TUI invasivas a pantalla completa (como `curses` o `textual`), ya que el teclado virtual táctil de Android oculta el 50% de la pantalla y genera problemas de redibujado. Se mantiene el flujo interactivo basado en prompts numéricos y respuestas cortas (`input()` o `rich.prompt.Prompt`), ideales para teclado móvil.
-4. **Desacoplamiento Arquitectónico:**  
-   La lógica de negocio y motores contables (`diario/`, `mayor/`, `balance/`) permanecen completamente independientes de la interfaz; las capas CLI (`cli.py`, `orquestador.py`) consumen los modelos para renderizarlos.
+5. **Desacoplamiento Arquitectónico:**  
+   La lógica de negocio y motores contables (`diario/`, `mayor/`, `balance/`) permanecen completamente independientes de la interfaz; las capas CLI (`cli.py`, `orquestador.py`) y el módulo de presentación `ui/` consumen los modelos para renderizarlos.
 
 ---
 
@@ -329,9 +347,9 @@ Para asegurar una presentación financiera legible, profesional y adaptativa tan
 flowchart LR
     F1["<b>Fase 1: Base Contable</b><br/>[COMPLETADA]<br/>• catalogo_contable.py<br/>• apertura/<br/>• planilla/"]
     F2["<b>Fase 2: Libro Diario</b><br/>[COMPLETADA]<br/>• diario/<br/>• Conectores Pda #1 y Nómina<br/>• Validación Doble Columna"]
-    F3["<b>Fase 3: Mayor y Balance</b><br/>[EN PROGRESO]<br/>• mayor/ (T-Gráficas) [OK]<br/>• balance/ (4 Columnas)"]
+    F3["<b>Fase 3: Mayor y Balance</b><br/>[EN PROGRESO]<br/>• mayor/ (T-Gráficas y 3 Col) [OK]<br/>• balance/ (4 Columnas)"]
     F4["<b>Fase 4: Excel Maestro</b><br/>[PENDIENTE]<br/>• exportadores/ openpyxl<br/>• Libro_Contable_Master.xlsx"]
-    F5["<b>Fase 5: CLI Unificada y Rich UI</b><br/>[EN PROGRESO]<br/>• main.py interactivo [OK]<br/>• Integración Rich / Termux"]
+    F5["<b>Fase 5: CLI Unificada y Rich UI</b><br/>[COMPLETADA]<br/>• main.py & orquestador.py [OK]<br/>• Integración Rich / Termux [OK]"]
 
     F1 ==> F2 ==> F3 ==> F4 ==> F5
 
@@ -339,7 +357,7 @@ flowchart LR
     style F2 fill:#2e7d32,stroke:#1b5e20,color:#ffffff
     style F3 fill:#f57c00,stroke:#e65100,color:#ffffff
     style F4 fill:#37474f,stroke:#263238,color:#ffffff
-    style F5 fill:#f57c00,stroke:#e65100,color:#ffffff
+    style F5 fill:#2e7d32,stroke:#1b5e20,color:#ffffff
 ```
 
 * **Fase 1 (Completada):**
@@ -351,10 +369,10 @@ flowchart LR
   - [x] Crear conectores para que `apertura` y `planilla` alimenten directamente al Diario.
   - [x] Permitir ingreso de partidas operativas adicionales (ventas, compras, cobros, pagos).
 * **Fase 3 (En Progreso):**
-  - [x] Crear el módulo `mayor/` que agrupe automáticamente el Diario y genere las T-Gráficas.
+  - [x] Crear el módulo `mayor/` que agrupe automáticamente el Diario y genere las T-Gráficas y Mayor a 3 columnas.
   - [ ] Crear el módulo `balance/` que tome el Mayor y produzca la matriz de 4 Columnas.
 * **Fase 4:**
   - [ ] Implementar los exportadores a Excel (`openpyxl`) para generar el libro maestro de 6 hojas listo para impresión y entrega legal.
-* **Fase 5 (En Progreso):**
+* **Fase 5 (Completada):**
   - [x] Menú de consola amigable e interactivo (`main.py` y `orquestador.py`) que permita operar todo el flujo con 1 solo comando.
-  - [ ] Integración de `rich` para tablas contables con auto-ajuste responsivo, árbol del catálogo y optimización para Termux.
+  - [x] Integración de `rich` para tablas contables con auto-ajuste responsivo, árbol del catálogo y optimización para Termux en todos los módulos CLI.
