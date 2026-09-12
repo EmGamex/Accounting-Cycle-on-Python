@@ -1,5 +1,5 @@
 """Capa de presentación y menú interactivo por consola para el cálculo de nómina y planillas."""
-from typing import Any, List, Optional, Tuple
+from typing import Any, Callable, List, NamedTuple, Optional, Tuple
 
 from .calculos import calcular_boleta
 from .contabilidad import generar_partida_contable
@@ -29,6 +29,16 @@ from ui import (
     imprimir_menu_opciones,
 )
 
+ARCHIVO_PLANTILLA_CSV_DEFAULT: str = "plantilla_empleados.csv"
+OPCION_PREDETERMINADA_MENU: int = 0
+OPCION_SALIR_CSV_LEGACY: str = "4"
+
+
+class AccionMenu(NamedTuple):
+    """Estructura para representar una opción ejecutable en el menú interactivo."""
+    descripcion: str
+    accion: Callable[[], Any]
+
 
 def flujo_interactivo() -> List[ResultadoPlanilla]:
     """Captura secuencial de empleados desde la consola."""
@@ -45,101 +55,170 @@ def flujo_interactivo() -> List[ResultadoPlanilla]:
     return planillas
 
 
-def menu_herramientas_csv(planillas_actuales: List[ResultadoPlanilla]) -> List[ResultadoPlanilla]:
-    """Menú secundario para carga o exportación de archivos CSV (opción a futuro)."""
-    imprimir_banner("HERRAMIENTAS CSV (OPCIONALES)", border_style="blue")
-    opciones = [
-        ("1", "Generar archivo 'plantilla_empleados.csv' de ejemplo"),
-        ("2", "Cargar y procesar empleados desde un archivo CSV"),
-    ]
-    if planillas_actuales:
-        opciones.append(("3", f"Exportar planillas actuales a '{ARCHIVO_PLANILLA_DEFAULT}'"))
+def _generar_plantilla_csv_accion() -> None:
+    """Acción de generar plantilla CSV de ejemplo."""
+    prompt = f"Nombre o ruta del archivo [{ARCHIVO_PLANTILLA_CSV_DEFAULT}]: "
+    ruta = input(prompt).strip() or ARCHIVO_PLANTILLA_CSV_DEFAULT
+    crear_plantilla_csv_ejemplo(ruta)
+    imprimir_exito(f"Plantilla generada exitosamente en: {ruta}")
 
-    imprimir_menu_opciones(opciones, texto_salir="Volver al menú principal", salir_codigo=OPCION_SALIR)
 
-    prompt_rango = f"[1-{len(opciones)}, {OPCION_SALIR}]"
-    opcion = input(f"\nSeleccione una opción {prompt_rango}: ").strip()
-
-    if opcion in (OPCION_SALIR, "4"):
-        return planillas_actuales
-    elif opcion == "1":
-        ruta = input("Nombre o ruta del archivo [plantilla_empleados.csv]: ").strip() or "plantilla_empleados.csv"
-        crear_plantilla_csv_ejemplo(ruta)
-        imprimir_exito(f"Plantilla generada exitosamente en: {ruta}")
-    elif opcion == "2":
-        ruta = input("Ruta del archivo CSV a cargar: ").strip()
-        try:
-            empleados = cargar_empleados_csv(ruta)
-            if not empleados:
-                imprimir_alerta("No se encontraron empleados en el archivo.")
-                return planillas_actuales
-            nuevos_resultados = []
-            for emp in empleados:
-                res = calcular_boleta(emp)
-                nuevos_resultados.append(res)
-                imprimir_boleta(res)
-            imprimir_exito(f"Se procesaron {len(nuevos_resultados)} empleado(s) desde el archivo.")
-            return planillas_actuales + nuevos_resultados
-        except FileNotFoundError:
-            imprimir_alerta(f"El archivo '{ruta}' no fue encontrado.")
-        except Exception as e:
-            imprimir_alerta(f"Error al procesar el archivo CSV: {e}")
-    elif opcion == "3" and planillas_actuales:
-        ruta = input(f"Nombre de archivo de destino [{ARCHIVO_PLANILLA_DEFAULT}]: ").strip() or ARCHIVO_PLANILLA_DEFAULT
-        exportar_planilla_csv(planillas_actuales, ruta)
-        imprimir_exito(f"Planilla exportada exitosamente en: {ruta}")
-    else:
-        imprimir_alerta(MENSAJE_ALERTA_OPCION)
-
+def _cargar_empleados_csv_accion(planillas_actuales: List[ResultadoPlanilla]) -> List[ResultadoPlanilla]:
+    """Acción de cargar y procesar empleados desde archivo CSV."""
+    ruta = input("Ruta del archivo CSV a cargar: ").strip()
+    try:
+        empleados = cargar_empleados_csv(ruta)
+        if not empleados:
+            imprimir_alerta("No se encontraron empleados en el archivo.")
+            return planillas_actuales
+        nuevos_resultados = []
+        for emp in empleados:
+            res = calcular_boleta(emp)
+            nuevos_resultados.append(res)
+            imprimir_boleta(res)
+        imprimir_exito(f"Se procesaron {len(nuevos_resultados)} empleado(s) desde el archivo.")
+        return planillas_actuales + nuevos_resultados
+    except FileNotFoundError:
+        imprimir_alerta(f"El archivo '{ruta}' no fue encontrado.")
+    except Exception as e:
+        imprimir_alerta(f"Error al procesar el archivo CSV: {e}")
     return planillas_actuales
 
 
-def _mostrar_menu_planillas(planillas_almacenadas: List[ResultadoPlanilla]) -> List[Tuple[str, str]]:
-    """Muestra el menú principal de operaciones de nóminas."""
-    console.print("\n[bold]Opciones principales:[/bold]")
-    opciones = [
-        ("1", "Ingresar empleados interactivamente (Predeterminado)"),
-        ("2", "Herramientas CSV (Carga / Plantilla / Exportación)"),
+def _exportar_planillas_csv_accion(planillas_actuales: List[ResultadoPlanilla]) -> None:
+    """Acción de exportar planillas existentes a archivo CSV."""
+    prompt = f"Nombre de archivo de destino [{ARCHIVO_PLANILLA_DEFAULT}]: "
+    ruta = input(prompt).strip() or ARCHIVO_PLANILLA_DEFAULT
+    exportar_planilla_csv(planillas_actuales, ruta)
+    imprimir_exito(f"Planilla exportada exitosamente en: {ruta}")
+
+
+def _obtener_acciones_csv(planillas_actuales: List[ResultadoPlanilla], contenedor: list[List[ResultadoPlanilla]]) -> List[AccionMenu]:
+    """Construye las acciones disponibles para el submenú CSV según su posición secuencial."""
+    def ejecutar_carga() -> None:
+        contenedor[0] = _cargar_empleados_csv_accion(contenedor[0])
+
+    acciones = [
+        AccionMenu(
+            f"Generar archivo '{ARCHIVO_PLANTILLA_CSV_DEFAULT}' de ejemplo",
+            _generar_plantilla_csv_accion,
+        ),
+        AccionMenu(
+            "Cargar y procesar empleados desde un archivo CSV",
+            ejecutar_carga,
+        ),
+    ]
+
+    if planillas_actuales:
+        acciones.append(
+            AccionMenu(
+                f"Exportar planillas actuales a '{ARCHIVO_PLANILLA_DEFAULT}'",
+                lambda: _exportar_planillas_csv_accion(contenedor[0]),
+            )
+        )
+
+    return acciones
+
+
+def menu_herramientas_csv(planillas_actuales: List[ResultadoPlanilla]) -> List[ResultadoPlanilla]:
+    """Menú secundario para carga o exportación de archivos CSV mapeado por índice."""
+    imprimir_banner("HERRAMIENTAS CSV (OPCIONALES)", border_style="blue")
+    contenedor = [list(planillas_actuales)]
+    acciones = _obtener_acciones_csv(planillas_actuales, contenedor)
+
+    opciones = [(str(idx), item.descripcion) for idx, item in enumerate(acciones, start=1)]
+    imprimir_menu_opciones(opciones, texto_salir="Volver al menú principal", salir_codigo=OPCION_SALIR)
+
+    prompt_rango = f"[1-{len(acciones)}, {OPCION_SALIR}]"
+    opcion = input(f"\nSeleccione una opción {prompt_rango}: ").strip()
+
+    if opcion in (OPCION_SALIR, OPCION_SALIR_CSV_LEGACY):
+        return contenedor[0]
+
+    if opcion.isdigit():
+        idx = int(opcion) - 1
+        if 0 <= idx < len(acciones):
+            acciones[idx].accion()
+            return contenedor[0]
+
+    imprimir_alerta(MENSAJE_ALERTA_OPCION)
+    return contenedor[0]
+
+
+def _obtener_acciones_planillas(
+    planillas_almacenadas: List[ResultadoPlanilla],
+    on_ingreso_interactivo: Callable[[], None],
+    on_herramientas_csv: Callable[[], None],
+    on_ver_partida: Callable[[], None],
+) -> List[AccionMenu]:
+    """Construye las acciones principales de planillas según su posición de índice."""
+    acciones = [
+        AccionMenu("Ingresar empleados interactivamente (Predeterminado)", on_ingreso_interactivo),
+        AccionMenu("Herramientas CSV (Carga / Plantilla / Exportación)", on_herramientas_csv),
     ]
     if planillas_almacenadas:
-        opciones.append(("3", "Ver partida contable consolidada"))
-    imprimir_menu_opciones(opciones, texto_salir="Salir", salir_codigo=OPCION_SALIR)
-    return opciones
+        acciones.append(AccionMenu("Ver partida contable consolidada", on_ver_partida))
+    return acciones
 
 
 def iniciar_flujo_planillas(
     planillas_iniciales: Optional[List[ResultadoPlanilla]] = None,
 ) -> Tuple[List[ResultadoPlanilla], Optional[Any]]:
-    """Punto de entrada interactivo principal para la gestión y cálculo de nóminas."""
+    """Punto de entrada interactivo principal con despacho desacoplado por índice."""
     planillas_almacenadas: List[ResultadoPlanilla] = list(planillas_iniciales) if planillas_iniciales else []
     ultima_partida = None
 
     imprimir_banner("SISTEMA DE PLANILLAS Y PARTIDAS CONTABLES (GUATEMALA)", border_style="cyan")
 
-    while True:
-        opciones = _mostrar_menu_planillas(planillas_almacenadas)
-
-        prompt_rango = f"[1-{len(opciones)}, {OPCION_SALIR}]"
-        eleccion = input(f"\nSeleccione opción {prompt_rango} [1]: ").strip()
-
-        if eleccion in ("1", ""):
-            nuevas = flujo_interactivo()
-            planillas_almacenadas.extend(nuevas)
-            if planillas_almacenadas:
-                console.print(f"\nSe han acumulado [cyan]{len(planillas_almacenadas)}[/cyan] planilla(s) en total.")
-                ultima_partida = generar_partida_contable(planillas_almacenadas)
-                imprimir_partida(ultima_partida)
-        elif eleccion == "2":
-            planillas_almacenadas = menu_herramientas_csv(planillas_almacenadas)
-            if planillas_almacenadas:
-                ultima_partida = generar_partida_contable(planillas_almacenadas)
-                imprimir_partida(ultima_partida)
-        elif eleccion == "3" and planillas_almacenadas:
+    def accion_ingreso() -> None:
+        nonlocal ultima_partida
+        nuevas = flujo_interactivo()
+        planillas_almacenadas.extend(nuevas)
+        if planillas_almacenadas:
+            console.print(f"\nSe han acumulado [cyan]{len(planillas_almacenadas)}[/cyan] planilla(s) en total.")
             ultima_partida = generar_partida_contable(planillas_almacenadas)
             imprimir_partida(ultima_partida)
-        elif eleccion == OPCION_SALIR:
+
+    def accion_csv() -> None:
+        nonlocal ultima_partida, planillas_almacenadas
+        planillas_almacenadas = menu_herramientas_csv(planillas_almacenadas)
+        if planillas_almacenadas:
+            ultima_partida = generar_partida_contable(planillas_almacenadas)
+            imprimir_partida(ultima_partida)
+
+    def accion_partida() -> None:
+        nonlocal ultima_partida
+        if planillas_almacenadas:
+            ultima_partida = generar_partida_contable(planillas_almacenadas)
+            imprimir_partida(ultima_partida)
+
+    while True:
+        acciones = _obtener_acciones_planillas(
+            planillas_almacenadas=planillas_almacenadas,
+            on_ingreso_interactivo=accion_ingreso,
+            on_herramientas_csv=accion_csv,
+            on_ver_partida=accion_partida,
+        )
+
+        opciones = [(str(idx), item.descripcion) for idx, item in enumerate(acciones, start=1)]
+        console.print("\n[bold]Opciones principales:[/bold]")
+        imprimir_menu_opciones(opciones, texto_salir="Salir", salir_codigo=OPCION_SALIR)
+
+        prompt_rango = f"[1-{len(acciones)}, {OPCION_SALIR}]"
+        eleccion = input(f"\nSeleccione opción {prompt_rango} [1]: ").strip()
+
+        if eleccion == OPCION_SALIR:
             console.print("\n¡Hasta pronto!")
             break
+
+        indice_seleccionado = (
+            OPCION_PREDETERMINADA_MENU
+            if eleccion == ""
+            else (int(eleccion) - 1 if eleccion.isdigit() else -1)
+        )
+
+        if 0 <= indice_seleccionado < len(acciones):
+            acciones[indice_seleccionado].accion()
         else:
             imprimir_alerta(MENSAJE_ALERTA_OPCION)
 
@@ -147,4 +226,5 @@ def iniciar_flujo_planillas(
         ultima_partida = generar_partida_contable(planillas_almacenadas)
 
     return planillas_almacenadas, ultima_partida
+
 
