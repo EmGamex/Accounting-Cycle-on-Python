@@ -6,17 +6,22 @@ from diario.asistentes import (
     registrar_operacion_simple_asistida,
     registrar_partida_libre_asistida,
     registrar_venta_asistida,
+    regularizar_iva_asistido,
 )
 from diario.engine import GestorLibroDiario
+from diario.operaciones import NOMBRE_IVA_CREDITO, NOMBRE_IVA_DEBITO
 from config import MENSAJE_ALERTA_OPCION, OPCION_SALIR
 from reportes import imprimir_partida_rich
 from ui import (
+    COLOR_AVISO,
     COLOR_EXITO,
     COLOR_SECUNDARIO,
     console,
+    formatear_moneda,
     imprimir_alerta,
     imprimir_banner,
     imprimir_menu_opciones,
+    pedir_confirmacion,
 )
 
 
@@ -69,10 +74,26 @@ def _obtener_acciones_diario() -> list[AccionMenu]:
             registrar_partida_libre_asistida,
         ),
         AccionMenu(
+            "Regularizar IVA del Período (Ajuste Débito vs. Crédito Fiscal)",
+            regularizar_iva_asistido,
+        ),
+        AccionMenu(
             "Ver Libro Diario Completo",
             _mostrar_libro_diario,
         ),
     ]
+
+
+def _verificar_regularizacion_al_finalizar(gestor: GestorLibroDiario) -> None:
+    """Detecta si hay saldos pendientes de compensar en IVA y ofrece regularizarlos antes de salir."""
+    if gestor.puede_regularizar_iva():
+        credito, debito = gestor.obtener_saldos_iva()
+        console.print(
+            f"\n[{COLOR_AVISO}]¡Aviso de Cierre de Período![/{COLOR_AVISO}] Se detectaron saldos pendientes en "
+            f"{NOMBRE_IVA_CREDITO} ({formatear_moneda(credito)}) y {NOMBRE_IVA_DEBITO} ({formatear_moneda(debito)})."
+        )
+        if pedir_confirmacion("¿Deseas regularizar el IVA antes de finalizar el Libro Diario?", default=True):
+            regularizar_iva_asistido(gestor)
 
 
 def _mostrar_menu(acciones: list[AccionMenu]) -> None:
@@ -98,6 +119,7 @@ def iniciar_flujo_diario(gestor: Optional[GestorLibroDiario] = None) -> None:
         seleccion = input(f"\nSeleccione una opción {prompt_rango}: ").strip()
 
         if seleccion == OPCION_SALIR:
+            _verificar_regularizacion_al_finalizar(gestor)
             console.print(f"\n[{COLOR_EXITO}]¡Gracias por utilizar el Sistema de Libro Diario![/{COLOR_EXITO}]")
             break
 

@@ -23,6 +23,7 @@ from ui import (
     imprimir_banner,
     imprimir_estado_ejercicio as ui_imprimir_estado_ejercicio,
     imprimir_exito,
+    pedir_confirmacion as ui_pedir_confirmacion,
 )
 
 # Constantes de configuración y presentación (con alias para compatibilidad y patching en tests)
@@ -50,12 +51,8 @@ def _mostrar_opciones_con_indices(acciones: list[AccionMenu], texto_salir: str =
 # ==============================================================================
 
 def pedir_confirmacion(mensaje: str, default: bool = True) -> bool:
-    """Solicita confirmación afirmativa o negativa al usuario."""
-    sufijo = " [s]: " if default else " [n]: "
-    resp = input(f"\n{mensaje} (s/n){sufijo}").strip().lower()
-    if default:
-        return resp in RESPUESTAS_AFIRMATIVAS
-    return resp in ("s", "si", "y", "yes")
+    """Solicita confirmación afirmativa o negativa al usuario de forma centralizada."""
+    return ui_pedir_confirmacion(mensaje, default=default)
 
 
 def asentar_partida_en_diario(gestor: GestorLibroDiario, partida_diario, tipo_nombre: str) -> None:

@@ -4,7 +4,7 @@ from decimal import Decimal
 from typing import Dict, List, Tuple
 
 import catalogo_contable
-from config import FORMATO_FECHA, SIMBOLO_MONEDA
+from config import CERO_MONETARIO, FORMATO_FECHA, SIMBOLO_MONEDA
 from .exceptions import CorrelativoError, CuentaInvalidaError, DescuadrePartidaError, FechaInvalidaError
 from .models import LibroDiario, MovimientoLinea, PartidaDiario
 from .storage import cargar_libro_json, guardar_libro_json
@@ -116,7 +116,7 @@ class GestorLibroDiario:
     def totales_por_cuenta(self) -> Dict[str, Dict[str, Decimal]]:
         """Calcula en O(N) la sumatoria acumulada de Debe y Haber agrupada por cuenta."""
         resumen: Dict[str, Dict[str, Decimal]] = defaultdict(
-            lambda: {"debe": Decimal("0.00"), "haber": Decimal("0.00")}
+            lambda: {"debe": CERO_MONETARIO, "haber": CERO_MONETARIO}
         )
         for partida in self.libro.partidas:
             for linea in partida.lineas:
@@ -134,6 +134,32 @@ class GestorLibroDiario:
             for l in p.lineas
             if termino == l.codigo.lower() or termino in l.nombre.lower()
         ]
+
+    def obtener_saldos_iva(self) -> Tuple[Decimal, Decimal]:
+        """Calcula los saldos netos actuales de Crédito Fiscal (1107) y Débito Fiscal (2105).
+
+        Crédito Fiscal (Activo): Debe - Haber
+        Débito Fiscal (Pasivo): Haber - Debe
+
+        Returns:
+            Tupla (saldo_credito, saldo_debito).
+        """
+        totales = self.totales_por_cuenta()
+        cod_credito = catalogo_contable.Cuenta.IVA_CREDITO.value
+        cod_debito = catalogo_contable.Cuenta.IVA_DEBITO.value
+
+        mov_credito = totales.get(cod_credito, {"debe": CERO_MONETARIO, "haber": CERO_MONETARIO})
+        mov_debito = totales.get(cod_debito, {"debe": CERO_MONETARIO, "haber": CERO_MONETARIO})
+
+        saldo_credito = mov_credito["debe"] - mov_credito["haber"]
+        saldo_debito = mov_debito["haber"] - mov_debito["debe"]
+
+        return max(CERO_MONETARIO, saldo_credito), max(CERO_MONETARIO, saldo_debito)
+
+    def puede_regularizar_iva(self) -> bool:
+        """Determina si ambas cuentas de IVA cuentan con saldo positivo compensable."""
+        credito, debito = self.obtener_saldos_iva()
+        return credito > CERO_MONETARIO and debito > CERO_MONETARIO
 
     def guardar_json(self, ruta_archivo: str) -> None:
         """Persiste el libro actual en formato JSON."""

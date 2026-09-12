@@ -15,6 +15,7 @@ from ui.consola import (
     imprimir_menu_opciones,
     imprimir_resumen_balance_apertura,
     obtener_ancho_consola,
+    pedir_confirmacion,
 )
 from ui.tablas import (
     generar_tabla_boleta,
@@ -41,6 +42,7 @@ from ui.temas import (
     COLOR_EXITO,
     COLOR_PRIMARIO,
     COLOR_SECUNDARIO,
+    COLOR_TEXTO,
 )
 
 __all__ = [
@@ -55,6 +57,7 @@ __all__ = [
     "COLOR_EXITO",
     "COLOR_PRIMARIO",
     "COLOR_SECUNDARIO",
+    "COLOR_TEXTO",
     "console",
     "formatear_moneda",
     "generar_arbol_catalogo",
@@ -81,4 +84,5 @@ __all__ = [
     "imprimir_resumen_balance_apertura",
     "mostrar_catalogo_arbol",
     "obtener_ancho_consola",
+    "pedir_confirmacion",
 ]
