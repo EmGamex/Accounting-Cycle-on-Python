@@ -347,7 +347,7 @@ Para asegurar una presentación financiera legible, profesional y adaptativa tan
 flowchart LR
     F1["<b>Fase 1: Base Contable</b><br/>[COMPLETADA]<br/>• catalogo_contable.py<br/>• apertura/<br/>• planilla/"]
     F2["<b>Fase 2: Libro Diario</b><br/>[COMPLETADA]<br/>• diario/<br/>• Conectores Pda #1 y Nómina<br/>• Validación Doble Columna"]
-    F3["<b>Fase 3: Mayor y Balance</b><br/>[EN PROGRESO]<br/>• mayor/ (T-Gráficas y 3 Col) [OK]<br/>• balance/ (4 Columnas)"]
+    F3["<b>Fase 3: Mayor y Balance</b><br/>[COMPLETADA]<br/>• mayor/ (T-Gráficas y 3 Col) [OK]<br/>• balance/ (4 Columnas) [OK]"]
     F4["<b>Fase 4: Excel Maestro</b><br/>[PENDIENTE]<br/>• exportadores/ openpyxl<br/>• Libro_Contable_Master.xlsx"]
     F5["<b>Fase 5: CLI Unificada y Rich UI</b><br/>[COMPLETADA]<br/>• main.py & orquestador.py [OK]<br/>• Integración Rich / Termux [OK]"]
 
@@ -355,7 +355,7 @@ flowchart LR
 
     style F1 fill:#2e7d32,stroke:#1b5e20,color:#ffffff
     style F2 fill:#2e7d32,stroke:#1b5e20,color:#ffffff
-    style F3 fill:#f57c00,stroke:#e65100,color:#ffffff
+    style F3 fill:#2e7d32,stroke:#1b5e20,color:#ffffff
     style F4 fill:#37474f,stroke:#263238,color:#ffffff
     style F5 fill:#2e7d32,stroke:#1b5e20,color:#ffffff
 ```
@@ -368,9 +368,9 @@ flowchart LR
   - [x] Crear el módulo `diario/` con la estructura unificada de `PartidaDiario`.
   - [x] Crear conectores para que `apertura` y `planilla` alimenten directamente al Diario.
   - [x] Permitir ingreso de partidas operativas adicionales (ventas, compras, cobros, pagos).
-* **Fase 3 (En Progreso):**
+* **Fase 3 (Completada):**
   - [x] Crear el módulo `mayor/` que agrupe automáticamente el Diario y genere las T-Gráficas y Mayor a 3 columnas.
-  - [ ] Crear el módulo `balance/` que tome el Mayor y produzca la matriz de 4 Columnas.
+  - [x] Crear el módulo `balance/` que tome el Mayor y produzca la matriz de 4 Columnas y Situación General de Cierre.
 * **Fase 4:**
   - [ ] Implementar los exportadores a Excel (`openpyxl`) para generar el libro maestro de 6 hojas listo para impresión y entrega legal.
 * **Fase 5 (Completada):**

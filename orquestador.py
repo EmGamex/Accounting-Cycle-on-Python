@@ -8,6 +8,7 @@ from diario.cli import iniciar_flujo_diario
 from diario.conectores import de_partida_apertura, de_partida_planilla
 from diario.engine import GestorLibroDiario
 from mayor.cli import iniciar_flujo_mayor
+from balance.cli import iniciar_flujo_balance
 from config import (
     ARCHIVO_EJERCICIO_DEFAULT as CFG_ARCHIVO_EJERCICIO_DEFAULT,
     MENSAJE_ALERTA_OPCION as CFG_MENSAJE_ALERTA_OPCION,
@@ -199,6 +200,10 @@ def _obtener_acciones_principales(gestor: GestorLibroDiario) -> list[AccionMenu]
         AccionMenu(
             "Sistema de Libro Mayor y T-Gráficas (Pases y Saldos)",
             lambda: iniciar_flujo_mayor(gestor_diario=gestor),
+        ),
+        AccionMenu(
+            "Sistema de Balances (4 Columnas y Situación General de Cierre)",
+            lambda: iniciar_flujo_balance(gestor_diario=gestor),
         ),
         AccionMenu(
             "Guardar / Cargar Ejercicio Contable (Persistencia JSON)",

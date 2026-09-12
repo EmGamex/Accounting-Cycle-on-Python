@@ -243,3 +243,134 @@ def generar_tabla_partida_nomina(p: Any) -> Table:
     tabla.columns[2].footer = formatear_moneda(p.total_haber)
 
     return tabla
+
+
+def generar_tabla_balance_4_columnas(balance_4c: Any) -> Table:
+    """Genera una tabla Rich estilizada para el Balance de Comprobación y Saldos (4 Columnas)."""
+    titulo = f"BALANCE DE COMPROBACIÓN Y SALDOS (4 COLUMNAS) - EJERCICIO {getattr(balance_4c, 'periodo', '2026')}"
+    tabla = Table(title=titulo, box=BORDE_TABLA, show_footer=True)
+    tabla.add_column("No.", justify="right", style="dim", no_wrap=True)
+    tabla.add_column("Código", style="dim cyan", no_wrap=True)
+    tabla.add_column("Cuenta", style=COLOR_TEXTO)
+    tabla.add_column("Suma Debe", justify="right", style="green", footer_style="bold green", no_wrap=True)
+    tabla.add_column("Suma Haber", justify="right", style="green", footer_style="bold green", no_wrap=True)
+    tabla.add_column("Saldo Deudor", justify="right", style="bold green", footer_style="bold green", no_wrap=True)
+    tabla.add_column("Saldo Acreedor", justify="right", style="bold green", footer_style="bold green", no_wrap=True)
+
+    for f in getattr(balance_4c, "filas", []):
+        nom = f.nombre[:30] + ".." if len(f.nombre) > 32 else f.nombre
+        if getattr(f, "es_saldo_anomalo", False):
+            nom += " [bold yellow]*[/bold yellow]"
+        sd_str = formatear_moneda(f.saldo_deudor) if f.saldo_deudor > Decimal("0.00") else "-"
+        sa_str = formatear_moneda(f.saldo_acreedor) if f.saldo_acreedor > Decimal("0.00") else "-"
+        tabla.add_row(
+            str(f.numero),
+            f.codigo,
+            nom,
+            formatear_moneda(f.suma_debe),
+            formatear_moneda(f.suma_haber),
+            sd_str,
+            sa_str,
+        )
+
+    cuadra = getattr(balance_4c, "cuadra", False)
+    estilo_pie = "bold green" if cuadra else "bold red"
+
+    tabla.columns[2].footer = f"[{estilo_pie}]SUMAS IGUALES:[/{estilo_pie}]"
+    tabla.columns[3].footer = f"[{estilo_pie}]{formatear_moneda(balance_4c.total_debe)}[/{estilo_pie}]"
+    tabla.columns[4].footer = f"[{estilo_pie}]{formatear_moneda(balance_4c.total_haber)}[/{estilo_pie}]"
+    tabla.columns[5].footer = f"[{estilo_pie}]{formatear_moneda(balance_4c.total_saldos_deudores)}[/{estilo_pie}]"
+    tabla.columns[6].footer = f"[{estilo_pie}]{formatear_moneda(balance_4c.total_saldos_acreedores)}[/{estilo_pie}]"
+
+    return tabla
+
+
+def generar_tabla_balance_general(balance_general: Any) -> Table:
+    """Genera una tabla Rich clasificada para el Balance de Situación General de Cierre."""
+    titulo = f"BALANCE DE SITUACIÓN GENERAL DE CIERRE - EJERCICIO {getattr(balance_general, 'periodo', '2026')}"
+    tabla = Table(title=titulo, box=BORDE_TABLA, show_footer=True)
+    tabla.add_column("Clasificación / Cuenta", style=COLOR_TEXTO)
+    tabla.add_column("Código", style="dim cyan", no_wrap=True)
+    tabla.add_column("Monto Parcial (Q)", justify="right", style="green", no_wrap=True)
+    tabla.add_column("Total Rubro (Q)", justify="right", style="bold green", footer_style="bold green", no_wrap=True)
+
+    # 1. ACTIVO
+    tabla.add_row("[bold cyan]1. ACTIVO[/bold cyan]", "", "", "")
+    for clase, subgrupos in getattr(balance_general, "estructura", {}).items():
+        if "activo" not in clase.lower():
+            continue
+        for subgrupo, items in subgrupos.items():
+            tabla.add_row(f"  [bold]{subgrupo}[/bold]", "", "", "")
+            subtot = Decimal("0.00")
+            for item in items:
+                signo = "(-)" if item.es_regularizadora else "   "
+                tabla.add_row(f"    {signo} {item.nombre}", item.codigo, formatear_moneda(item.monto), "")
+                if item.es_regularizadora:
+                    subtot -= item.monto
+                else:
+                    subtot += item.monto
+            tabla.add_row(f"    [italic]Subtotal {subgrupo}[/italic]", "", "", formatear_moneda(subtot))
+
+    tabla.add_row("[bold green]TOTAL ACTIVO[/bold green]", "", "", f"[bold green]{formatear_moneda(balance_general.total_activo)}[/bold green]")
+    tabla.add_row("", "", "", "")
+
+    # 2. PASIVO
+    tabla.add_row("[bold cyan]2. PASIVO[/bold cyan]", "", "", "")
+    for clase, subgrupos in getattr(balance_general, "estructura", {}).items():
+        if "pasivo" not in clase.lower():
+            continue
+        for subgrupo, items in subgrupos.items():
+            tabla.add_row(f"  [bold]{subgrupo}[/bold]", "", "", "")
+            subtot = Decimal("0.00")
+            for item in items:
+                signo = "(-)" if item.es_regularizadora else "   "
+                tabla.add_row(f"    {signo} {item.nombre}", item.codigo, formatear_moneda(item.monto), "")
+                subtot += item.monto
+            tabla.add_row(f"    [italic]Subtotal {subgrupo}[/italic]", "", "", formatear_moneda(subtot))
+
+    tabla.add_row("[bold green]TOTAL PASIVO[/bold green]", "", "", f"[bold green]{formatear_moneda(balance_general.total_pasivo)}[/bold green]")
+    tabla.add_row("", "", "", "")
+
+    # 3. PATRIMONIO NETO
+    tabla.add_row("[bold cyan]3. CAPITAL / PATRIMONIO NETO[/bold cyan]", "", "", "")
+    for clase, subgrupos in getattr(balance_general, "estructura", {}).items():
+        if not any(k in clase.lower() for k in ("capital", "patrimonio")):
+            continue
+        for subgrupo, items in subgrupos.items():
+            tabla.add_row(f"  [bold]{subgrupo}[/bold]", "", "", "")
+            subtot = Decimal("0.00")
+            for item in items:
+                signo = "(-)" if item.es_regularizadora else "   "
+                tabla.add_row(f"    {signo} {item.nombre}", item.codigo, formatear_moneda(item.monto), "")
+                if item.es_regularizadora:
+                    subtot -= item.monto
+                else:
+                    subtot += item.monto
+            tabla.add_row(f"    [italic]Subtotal {subgrupo}[/italic]", "", "", formatear_moneda(subtot))
+
+    tabla.add_row("[bold green]TOTAL PATRIMONIO NETO[/bold green]", "", "", f"[bold green]{formatear_moneda(balance_general.total_patrimonio)}[/bold green]")
+
+    cuadra = getattr(balance_general, "cuadra", False)
+    estilo_pie = "bold green" if cuadra else "bold red"
+    tabla.columns[0].footer = f"[{estilo_pie}]TOTAL PASIVO Y PATRIMONIO NETO:[/{estilo_pie}]"
+    tabla.columns[3].footer = f"[{estilo_pie}]{formatear_moneda(balance_general.total_pasivo_y_patrimonio)}[/{estilo_pie}]"
+
+    return tabla
+
+
+def generar_tabla_estado_resultados(resumen: Any) -> Table:
+    """Genera una tabla Rich con el Estado de Resultados condensado."""
+    tabla = Table(title="ESTADO DE RESULTADOS CONDENSADO (PÉRDIDAS Y GANANCIAS)", box=BORDE_TABLA)
+    tabla.add_column("Concepto", style=COLOR_TEXTO)
+    tabla.add_column("Monto (Q)", justify="right", style="bold green", no_wrap=True)
+
+    tabla.add_row("Ingresos Operacionales y Extraordinarios", formatear_moneda(resumen.total_ingresos))
+    tabla.add_row("(-) Costos de Ventas y Compras", f"({formatear_moneda(resumen.total_costos)})")
+    tabla.add_row("(-) Gastos de Operación y Financieros", f"({formatear_moneda(resumen.total_gastos)})")
+
+    estilo = "bold green" if resumen.es_ganancia else "bold red"
+    etiqueta = "GANANCIA NETA DEL EJERCICIO" if resumen.es_ganancia else "PÉRDIDA NETA DEL EJERCICIO"
+    tabla.add_row(f"[{estilo}]{etiqueta}[/{estilo}]", f"[{estilo}]{formatear_moneda(abs(resumen.resultado_ejercicio))}[/{estilo}]")
+
+    return tabla
+
