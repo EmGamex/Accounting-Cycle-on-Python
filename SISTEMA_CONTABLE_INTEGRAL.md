@@ -304,18 +304,18 @@ flowchart LR
 ```mermaid
 flowchart LR
     F1["<b>Fase 1: Base Contable</b><br/>[COMPLETADA]<br/>• catalogo_contable.py<br/>• apertura/<br/>• planilla/"]
-    F2["<b>Fase 2: Libro Diario</b><br/>[EN PROGRESO]<br/>• diario/<br/>• Conectores Pda #1 y Nómina<br/>• Validación Doble Columna"]
-    F3["<b>Fase 3: Mayor y Balance</b><br/>[PENDIENTE]<br/>• mayor/ (T-Gráficas)<br/>• balance/ (4 Columnas)"]
+    F2["<b>Fase 2: Libro Diario</b><br/>[COMPLETADA]<br/>• diario/<br/>• Conectores Pda #1 y Nómina<br/>• Validación Doble Columna"]
+    F3["<b>Fase 3: Mayor y Balance</b><br/>[EN PROGRESO]<br/>• mayor/ (T-Gráficas) [OK]<br/>• balance/ (4 Columnas)"]
     F4["<b>Fase 4: Excel Maestro</b><br/>[PENDIENTE]<br/>• exportadores/ openpyxl<br/>• Libro_Contable_Master.xlsx"]
-    F5["<b>Fase 5: CLI Unificada</b><br/>[PENDIENTE]<br/>• main.py interactivo<br/>• Pipeline desatendido"]
+    F5["<b>Fase 5: CLI Unificada</b><br/>[COMPLETADA]<br/>• main.py interactivo<br/>• Pipeline desatendido"]
 
     F1 ==> F2 ==> F3 ==> F4 ==> F5
 
     style F1 fill:#2e7d32,stroke:#1b5e20,color:#ffffff
-    style F2 fill:#f57c00,stroke:#e65100,color:#ffffff
-    style F3 fill:#37474f,stroke:#263238,color:#ffffff
+    style F2 fill:#2e7d32,stroke:#1b5e20,color:#ffffff
+    style F3 fill:#f57c00,stroke:#e65100,color:#ffffff
     style F4 fill:#37474f,stroke:#263238,color:#ffffff
-    style F5 fill:#37474f,stroke:#263238,color:#ffffff
+    style F5 fill:#2e7d32,stroke:#1b5e20,color:#ffffff
 ```
 
 * **Fase 1 (Completada):**
