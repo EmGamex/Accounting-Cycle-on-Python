@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """Definición centralizada de estilos visuales, paleta de colores y bordes para Rich."""
 from rich import box
 
@@ -6,6 +6,18 @@ from rich import box
 BORDE_TABLA = box.ROUNDED
 BORDE_PANEL = box.ROUNDED
 BORDE_COMPACTO = box.SIMPLE
+
+# Borde clásico en forma de T abierta para cuentas contables (sin bordes exteriores)
+BORDE_T_GRAFICA = box.Box(
+    "    \n"
+    "  │ \n"
+    " ─┼─\n"
+    "  │ \n"
+    "    \n"
+    " ─┼─\n"
+    "  │ \n"
+    "    \n"
+)
 
 # Paleta de colores semántica
 COLOR_PRIMARIO = "bold cyan"

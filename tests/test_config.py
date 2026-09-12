@@ -22,6 +22,7 @@ class TestConfig(unittest.TestCase):
 
     def test_parametros_tributarios_guatemala(self):
         self.assertEqual(config.SIMBOLO_MONEDA, "Q")
+        self.assertEqual(config.FORMATO_FECHA, "%d/%m/%Y")
         self.assertEqual(config.TASA_IVA, Decimal("0.12"))
         self.assertEqual(config.TASA_IGSS_LABORAL, Decimal("0.0483"))
         self.assertEqual(config.TASA_IGSS_PATRONAL, Decimal("0.1267"))

@@ -151,6 +151,42 @@ class TestGestorLibroDiario(unittest.TestCase):
         p_ok = self.gestor.registrar_partida(partida, validar_catalogo=False)
         self.assertEqual(p_ok.numero, 1)
 
+    def test_agrupacion_movimientos_y_totales_por_cuenta(self):
+        """Verifica la agrupación en O(N) de movimientos y cálculo acumulado por cuenta."""
+        p1 = PartidaDiario(numero=1, fecha=date(2026, 1, 1), glosa="Apertura")
+        p1.agregar_cargo("1101", "Caja General", Decimal("1000.00"))
+        p1.agregar_abono("3101", "Capital Social", Decimal("1000.00"))
+        self.gestor.registrar_partida(p1)
+
+        p2 = PartidaDiario(numero=2, fecha=date(2026, 1, 2), glosa="Depósito")
+        p2.agregar_cargo("1102", "Bancos", Decimal("400.00"))
+        p2.agregar_abono("1101", "Caja General", Decimal("400.00"))
+        self.gestor.registrar_partida(p2)
+
+        # 1. Verificar agrupar_movimientos_por_cuenta
+        agrupado = self.gestor.agrupar_movimientos_por_cuenta()
+        self.assertIn("1101", agrupado)
+        self.assertIn("1102", agrupado)
+        self.assertIn("3101", agrupado)
+        self.assertEqual(len(agrupado["1101"]), 2)  # Aparece en p1 (cargo) y p2 (abono)
+        self.assertEqual(len(agrupado["1102"]), 1)
+        self.assertEqual(len(agrupado["3101"]), 1)
+
+        # 2. Verificar totales_por_cuenta
+        totales = self.gestor.totales_por_cuenta()
+        self.assertEqual(totales["1101"]["debe"], Decimal("1000.00"))
+        self.assertEqual(totales["1101"]["haber"], Decimal("400.00"))
+        self.assertEqual(totales["1102"]["debe"], Decimal("400.00"))
+        self.assertEqual(totales["1102"]["haber"], Decimal("0.00"))
+        self.assertEqual(totales["3101"]["debe"], Decimal("0.00"))
+        self.assertEqual(totales["3101"]["haber"], Decimal("1000.00"))
+
+        # 3. Verificar filtrar_por_cuenta
+        filtro_caja = self.gestor.filtrar_por_cuenta("1101")
+        self.assertEqual(len(filtro_caja), 2)
+        filtro_nombre = self.gestor.filtrar_por_cuenta("Bancos")
+        self.assertEqual(len(filtro_nombre), 1)
+
 
 class TestConectoresAperturaYPlanilla(unittest.TestCase):
     """Pruebas para los adaptadores de apertura y planilla hacia PartidaDiario."""

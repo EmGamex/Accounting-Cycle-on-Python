@@ -1,4 +1,4 @@
-﻿"""Pruebas unitarias para el menú interactivo CLI de mayor/."""
+"""Pruebas unitarias para el menú interactivo CLI de mayor/."""
 from datetime import date
 from decimal import Decimal
 import io
@@ -73,3 +73,21 @@ class TestMayorCLI(unittest.TestCase):
         finally:
             if os.path.exists("test_cli_tg.txt"):
                 os.remove("test_cli_tg.txt")
+
+    @patch("builtins.input", side_effect=["6", "test_cli_formal.txt", "0"])
+    def test_exportar_mayor_formal(self, mock_input):
+        gestor_mayor = GestorLibroMayor(self.diario)
+        try:
+            iniciar_flujo_mayor(gestor_mayor=gestor_mayor)
+            self.assertTrue(os.path.exists("test_cli_formal.txt"))
+        finally:
+            if os.path.exists("test_cli_formal.txt"):
+                os.remove("test_cli_formal.txt")
+
+    @patch("sys.stdout", new_callable=io.StringIO)
+    @patch("builtins.input", side_effect=["1", "3", "0"])
+    def test_vistas_mayor_vacio(self, mock_input, mock_stdout):
+        gestor_vacio = GestorLibroMayor()
+        iniciar_flujo_mayor(gestor_mayor=gestor_vacio)
+        salida = mock_stdout.getvalue()
+        self.assertIn("No hay movimientos registrados en el Libro Mayor.", salida)

@@ -7,7 +7,7 @@ import catalogo_contable
 from diario.engine import GestorLibroDiario
 
 # Constantes de formato y presentación
-FORMATO_FECHA = "%d/%m/%Y"
+from config import FORMATO_FECHA
 PRECISION_MONEDA = Decimal("0.01")
 MONTO_MINIMO = Decimal("0.00")
 MAX_COINCIDENCIAS = 7

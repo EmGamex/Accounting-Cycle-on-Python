@@ -9,7 +9,7 @@ from diario.engine import GestorLibroDiario
 from diario.models import PartidaDiario
 from diario.prompts import pedir_fecha, pedir_monto
 
-from ui import console, imprimir_banner
+from ui import console, imprimir_alerta, imprimir_banner
 from .comun import (
     COD_BANCOS,
     COD_CAJA,
@@ -65,7 +65,7 @@ def registrar_apertura_asistida(gestor: GestorLibroDiario) -> Optional[PartidaDi
             imprimir_reportes=True,
         )
         if not pda_ap:
-            print("\n  [!] Apertura cancelada o sin cuentas registradas.")
+            imprimir_alerta("Apertura cancelada o sin cuentas registradas.")
             return None
         fecha = pedir_fecha("\nFecha del asiento de apertura en el Libro Diario [Hoy]: ")
 
