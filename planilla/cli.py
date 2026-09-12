@@ -16,6 +16,7 @@ from .models import PartidaContable, ResultadoPlanilla
 
 from config import (
     ARCHIVO_PLANILLA_DEFAULT,
+    ARCHIVO_PLANTILLA_CSV_DEFAULT,
     MENSAJE_ALERTA_OPCION,
     OPCION_SALIR,
     RESPUESTAS_AFIRMATIVAS,
@@ -29,7 +30,6 @@ from ui import (
     imprimir_menu_opciones,
 )
 
-ARCHIVO_PLANTILLA_CSV_DEFAULT: str = "plantilla_empleados.csv"
 OPCION_PREDETERMINADA_MENU: int = 0
 OPCION_SALIR_CSV_LEGACY: str = "4"
 
