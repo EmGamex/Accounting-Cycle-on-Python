@@ -19,7 +19,6 @@ def parse_linea_planilla(texto_cuenta: str) -> Tuple[str, str]:
         '1102        Bancos (Pago Líquido de Nómina)' -> ('1102', 'Bancos (Pago Líquido de Nómina)')
     """
     texto_limpio = texto_cuenta.strip()
-    # Buscar el primer bloque alfanumérico/con guiones como código
     partes = texto_limpio.split(maxsplit=1)
     if len(partes) == 1:
         return partes[0], partes[0]
@@ -27,7 +26,6 @@ def parse_linea_planilla(texto_cuenta: str) -> Tuple[str, str]:
     codigo = partes[0].strip()
     resto = partes[1].strip()
 
-    # Remover prefijo 'a:' o 'a :' si existiera
     resto = re.sub(r"^a\s*:\s*", "", resto, flags=re.IGNORECASE).strip()
 
     return codigo, resto
@@ -43,7 +41,7 @@ def de_partida_apertura(
     num = numero if numero is not None else partida_apertura.numero
 
     lineas_diario = []
-    # Primero cargos, luego abonos
+    # Convención formal guatemalteca: débitos preceden a créditos con sangría legal
     cargos = [l for l in partida_apertura.lineas if l.debe > Decimal("0.00")]
     abonos = [l for l in partida_apertura.lineas if l.haber > Decimal("0.00")]
 

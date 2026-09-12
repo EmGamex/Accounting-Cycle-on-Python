@@ -1,5 +1,8 @@
-﻿"""Capa de presentación y menú interactivo por consola para el Libro Mayor y T-Gráficas."""
+"""Capa de presentación y menú interactivo por consola para el Libro Mayor y T-Gráficas."""
 from typing import Any, Callable, NamedTuple, Optional
+
+from rich import box
+from rich.table import Table
 
 from diario.engine import GestorLibroDiario
 from reportes.formato import formato_moneda, linea_doble, linea_simple
@@ -12,12 +15,12 @@ from reportes.t_graficas import (
     generar_texto_t_grafica,
     generar_texto_todas_t_graficas,
 )
+from ui import console, imprimir_alerta, imprimir_aviso, imprimir_banner, imprimir_exito
 from .engine import GestorLibroMayor, mayorizar_libro_diario
 from .exceptions import MayorError
 
-ANCHO_BANNER = 70
 OPCION_SALIR = "0"
-MENSAJE_ALERTA_OPCION = "  (!) Opción no reconocida. Intente nuevamente."
+MENSAJE_ALERTA_OPCION = "Opción no reconocida. Intente nuevamente."
 
 
 class AccionMenu(NamedTuple):
@@ -28,10 +31,7 @@ class AccionMenu(NamedTuple):
 
 def _imprimir_encabezado() -> None:
     """Imprime el banner del menú del Libro Mayor."""
-    separador = "=" * ANCHO_BANNER
-    print(separador)
-    print("       SISTEMA DE LIBRO MAYOR Y T-GRÁFICAS (GUATEMALA)")
-    print(separador)
+    imprimir_banner("SISTEMA DE LIBRO MAYOR Y T-GRÁFICAS (GUATEMALA)", border_style="cyan")
 
 
 def _imprimir_resumen_mayor(gestor_mayor: GestorLibroMayor) -> None:
@@ -39,9 +39,11 @@ def _imprimir_resumen_mayor(gestor_mayor: GestorLibroMayor) -> None:
     mayor = gestor_mayor.sincronizar()
     num_ctas = len(mayor.cuentas)
     estado = "CUADRADO" if mayor.cuadra or num_ctas == 0 else "DESCUADRADO"
-    print(
-        f"\nLibro Mayor Actual: {num_ctas} cuenta(s) activa(s) | "
-        f"Debe: Q{mayor.total_debe:,.2f} | Haber: Q{mayor.total_haber:,.2f} [{estado}]"
+    color = "green" if mayor.cuadra or num_ctas == 0 else "red"
+    console.print(
+        f"\n[bold]Libro Mayor Actual:[/bold] [cyan]{num_ctas}[/cyan] cuenta(s) activa(s) | "
+        f"Debe: [green]Q{mayor.total_debe:,.2f}[/green] | Haber: [green]Q{mayor.total_haber:,.2f}[/green] "
+        f"[[bold {color}]{estado}[/bold {color}]]"
     )
 
 
@@ -55,7 +57,7 @@ def _consultar_t_grafica_individual(gestor_mayor: GestorLibroMayor) -> None:
     """Solicita código o nombre de cuenta y muestra su T-gráfica."""
     mayor = gestor_mayor.sincronizar()
     if not mayor.cuentas:
-        print("\n  (!) El Libro Mayor no tiene cuentas registradas.")
+        imprimir_alerta("El Libro Mayor no tiene cuentas registradas.")
         return
 
     termino = input("\nIngrese código o nombre de la cuenta a consultar: ").strip()
@@ -64,20 +66,20 @@ def _consultar_t_grafica_individual(gestor_mayor: GestorLibroMayor) -> None:
 
     coincidencias = mayor.buscar_cuentas(termino)
     if not coincidencias:
-        print(f"  (!) No se encontró ninguna cuenta que coincida con '{termino}'.")
+        imprimir_alerta(f"No se encontró ninguna cuenta que coincida con '{termino}'.")
         return
 
     if len(coincidencias) == 1:
         cuenta = coincidencias[0]
     else:
-        print(f"\nSe encontraron {len(coincidencias)} cuentas:")
+        console.print(f"\nSe encontraron [cyan]{len(coincidencias)}[/cyan] cuentas:")
         for idx, c in enumerate(coincidencias, start=1):
-            print(f"  [{idx}] [{c.codigo}] {c.nombre}")
+            console.print(f"  [bold cyan][{idx}][/bold cyan] [{c.codigo}] {c.nombre}")
         sel = input("Seleccione el número de cuenta: ").strip()
         if sel.isdigit() and 1 <= int(sel) <= len(coincidencias):
             cuenta = coincidencias[int(sel) - 1]
         else:
-            print("  (!) Selección cancelada.")
+            imprimir_alerta("Selección cancelada.")
             return
 
     print("\n" + linea_simple(55))
@@ -93,31 +95,15 @@ def _ver_mayor_formal(gestor_mayor: GestorLibroMayor) -> None:
 
 def _ver_resumen_sumas_y_saldos(gestor_mayor: GestorLibroMayor) -> None:
     """Imprime una tabla compacta con las sumas y saldos de cada cuenta."""
+    from ui.tablas import generar_tabla_sumas_y_saldos
+
     mayor = gestor_mayor.sincronizar()
-    cuentas = mayor.cuentas_ordenadas
-    ancho = 80
-    print("\n" + linea_doble(ancho))
-    print("RESUMEN DE CUENTAS MAYORIZADAS (SUMAS Y SALDOS)".center(ancho))
-    print(linea_doble(ancho))
-    print(f"{'CODIGO':<8} {'CUENTA':<28} {'DEBE':>12} {'HABER':>12} {'S.DEUDOR':>12} {'S.ACREEDOR':>12}")
-    print(linea_simple(ancho))
+    tabla = generar_tabla_sumas_y_saldos(mayor)
+    console.print(tabla)
 
-    for c in cuentas:
-        d_str = formato_moneda(c.total_debe)
-        h_str = formato_moneda(c.total_haber)
-        sd_str = formato_moneda(c.saldo_deudor) if c.saldo_deudor > 0 else "-"
-        sa_str = formato_moneda(c.saldo_acreedor) if c.saldo_acreedor > 0 else "-"
-        nom_trunc = c.nombre[:26] + ".." if len(c.nombre) > 28 else c.nombre
-        print(f"{c.codigo:<8} {nom_trunc:<28} {d_str:>12} {h_str:>12} {sd_str:>12} {sa_str:>12}")
-
-    print(linea_simple(ancho))
-    tot_d = formato_moneda(mayor.total_debe)
-    tot_h = formato_moneda(mayor.total_haber)
-    tot_sd = formato_moneda(mayor.total_saldos_deudores)
-    tot_sa = formato_moneda(mayor.total_saldos_acreedores)
-    print(f"{'SUMAS:':<37} {tot_d:>12} {tot_h:>12} {tot_sd:>12} {tot_sa:>12}")
-    print(linea_doble(ancho))
-    print(f"Estado: {'CUADRE EXACTO' if mayor.cuadra else 'DESCUADRADO'}")
+    cuadre_msg = "CUADRE EXACTO" if mayor.cuadra else "DESCUADRADO"
+    color = "green" if mayor.cuadra else "red"
+    console.print(f"Estado: [[bold {color}]{cuadre_msg}[/bold {color}]]")
 
 
 def _exportar_t_graficas_txt(gestor_mayor: GestorLibroMayor) -> None:
@@ -126,9 +112,9 @@ def _exportar_t_graficas_txt(gestor_mayor: GestorLibroMayor) -> None:
     try:
         mayor = gestor_mayor.sincronizar()
         ruta_gen = exportar_reporte_t_graficas(mayor, ruta_archivo=ruta)
-        print(f"  [OK] Reporte de T-Gráficas exportado exitosamente a '{ruta_gen}'.")
+        imprimir_exito(f"Reporte de T-Gráficas exportado exitosamente a '{ruta_gen}'.")
     except Exception as e:
-        print(f"  (!) Error al exportar: {e}")
+        imprimir_alerta(f"Error al exportar: {e}")
 
 
 def _exportar_mayor_formal_txt(gestor_mayor: GestorLibroMayor) -> None:
@@ -137,9 +123,9 @@ def _exportar_mayor_formal_txt(gestor_mayor: GestorLibroMayor) -> None:
     try:
         mayor = gestor_mayor.sincronizar()
         ruta_gen = exportar_reporte_libro_mayor(mayor, ruta_archivo=ruta)
-        print(f"  [OK] Reporte de Libro Mayor formal exportado exitosamente a '{ruta_gen}'.")
+        imprimir_exito(f"Reporte de Libro Mayor formal exportado exitosamente a '{ruta_gen}'.")
     except Exception as e:
-        print(f"  (!) Error al exportar: {e}")
+        imprimir_alerta(f"Error al exportar: {e}")
 
 
 def _obtener_acciones_mayor() -> list[AccionMenu]:
@@ -170,24 +156,24 @@ def iniciar_flujo_mayor(
 
     while True:
         _imprimir_resumen_mayor(gestor_mayor)
-        print("\nOperaciones de Libro Mayor disponibles:")
+        console.print("\nOperaciones de Libro Mayor disponibles:")
         for idx, item in enumerate(acciones, start=1):
-            print(f"  [{idx}] {item.descripcion}")
-        print(f"  [{OPCION_SALIR}] Volver al menú principal")
+            console.print(f"  [bold cyan][{idx}][/bold cyan] {item.descripcion}")
+        console.print(f"  [bold dim][{OPCION_SALIR}][/bold dim] Volver al menú principal")
 
         prompt_rango = f"[1-{len(acciones)}, {OPCION_SALIR}]"
         seleccion = input(f"\nSeleccione una opción {prompt_rango}: ").strip()
 
         if seleccion == OPCION_SALIR:
-            print("\nRetornando al menú principal...")
+            console.print("\nRetornando al menú principal...")
             break
 
         if seleccion.isdigit() and 1 <= int(seleccion) <= len(acciones):
             try:
                 acciones[int(seleccion) - 1].accion(gestor_mayor)
             except KeyboardInterrupt:
-                print("\n  [!] Operación cancelada por el usuario.")
+                imprimir_aviso("Operación cancelada por el usuario.")
             except Exception as e:
-                print(f"\n  (!) Error durante la operación: {e}")
+                imprimir_alerta(f"Error durante la operación: {e}")
         else:
-            print(MENSAJE_ALERTA_OPCION)
+            imprimir_alerta(MENSAJE_ALERTA_OPCION)

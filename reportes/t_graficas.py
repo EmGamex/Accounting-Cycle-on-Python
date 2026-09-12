@@ -26,7 +26,6 @@ def generar_texto_t_grafica(cuenta: CuentaMayor, ancho_col: int = 26) -> str:
     lineas: List[str] = []
     ancho_total = (ancho_col * 2) + 1
 
-    # Título centrado sobre la T
     titulo = f"[{cuenta.codigo}] {cuenta.nombre}"
     lineas.append(centrar_titulo(titulo, ancho_total))
 

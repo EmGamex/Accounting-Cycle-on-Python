@@ -6,14 +6,13 @@ from diario.models import PartidaDiario
 from diario.operaciones import crear_partida_compra, crear_partida_venta
 from diario.prompts import buscar_o_seleccionar_cuenta, pedir_fecha, pedir_monto
 
+from ui import imprimir_banner
 from .comun import COD_GASTO_DEFAULT, capturar_condicion_liquidacion, guardar_y_mostrar_partida
 
 
 def registrar_compra_asistida(gestor: GestorLibroDiario) -> Optional[PartidaDiario]:
     """Registra una compra con desglose automático de Crédito Fiscal IVA (12%)."""
-    print("\n" + "=" * 65)
-    print("          REGISTRO DE COMPRA O GASTO CON IVA (12%)")
-    print("=" * 65)
+    imprimir_banner("REGISTRO DE COMPRA O GASTO CON IVA (12%)", border_style="cyan")
     glosa = input("Descripción o concepto de la compra: ").strip() or "Compra de bienes/servicios para la empresa"
     doc = input("No. de Factura / Documento: ").strip() or "FAC-001"
     total = pedir_monto("Total de la factura (IVA incluido): Q ")
@@ -47,9 +46,7 @@ def registrar_compra_asistida(gestor: GestorLibroDiario) -> Optional[PartidaDiar
 
 def registrar_venta_asistida(gestor: GestorLibroDiario) -> Optional[PartidaDiario]:
     """Registra una venta con desglose automático de Débito Fiscal IVA (12%)."""
-    print("\n" + "=" * 65)
-    print("          REGISTRO DE VENTA CON IVA (12%)")
-    print("=" * 65)
+    imprimir_banner("REGISTRO DE VENTA CON IVA (12%)", border_style="cyan")
     glosa = input("Descripción o concepto de la venta: ").strip() or "Venta de mercaderías"
     doc = input("No. de Factura emitida (FEL): ").strip() or "FEL"
     total = pedir_monto("Total de la venta (IVA incluido): Q ")

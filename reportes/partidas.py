@@ -39,7 +39,6 @@ def generar_texto_partida(
     """
     lineas_salida: List[str] = []
 
-    # Encabezado
     lineas_salida.append(linea_simple(ancho))
     fecha_obj: Optional[date] = getattr(partida, "fecha", None)
 
@@ -58,7 +57,6 @@ def generar_texto_partida(
     lineas_salida.append(f"{'CODIGO':<9} {'CUENTA / CONCEPTO':<43} {'DEBE':>12} {'HABER':>14}")
     lineas_salida.append(linea_simple(ancho))
 
-    # Detalle de líneas (Cargos primero, luego Abonos con sangría legal "a: ")
     for linea in partida.lineas:
         es_cargo = getattr(linea, "es_cargo", None)
         if es_cargo is None:
@@ -72,7 +70,6 @@ def generar_texto_partida(
             nombre_abono = f"a: {linea.nombre}"
             lineas_salida.append(f"{linea.codigo:<9}   {nombre_abono:<41} {'':>12} {monto_haber:>14}")
 
-    # Glosa explicativa / Razón
     lineas_salida.append("")
     glosa = getattr(partida, "glosa", None) or getattr(partida, "descripcion", "")
     glosa_txt = f"    ( {glosa} )"
@@ -81,7 +78,6 @@ def generar_texto_partida(
         glosa_txt += f" [Doc: {doc_soporte}]"
     lineas_salida.append(glosa_txt)
 
-    # Líneas de cuadre y sumas iguales
     lineas_salida.append(f"{'':<53} {'-'*12} {'-'*14}")
     total_d = formato_moneda(partida.total_debe)
     total_h = formato_moneda(partida.total_haber)
@@ -89,3 +85,21 @@ def generar_texto_partida(
     lineas_salida.append(f"{'':<53} {'='*12} {'='*14}")
 
     return "\n".join(lineas_salida)
+
+
+def generar_tabla_partida_rich(
+    partida: Any,
+    titulo_personalizado: Optional[str] = None,
+):
+    """Genera una tabla estilizada con Rich para una partida contable (delega a ui.tablas)."""
+    from ui.tablas import generar_tabla_partida
+    return generar_tabla_partida(partida, titulo_personalizado=titulo_personalizado)
+
+
+def imprimir_partida_rich(partida: Any, console_obj=None, titulo_personalizado: Optional[str] = None) -> None:
+    """Imprime en consola una partida contable con Rich (delega a ui.tablas)."""
+    try:
+        from ui.tablas import imprimir_partida_rich as ui_imprimir_partida
+        ui_imprimir_partida(partida, console_obj=console_obj, titulo_personalizado=titulo_personalizado)
+    except ImportError:
+        print(generar_texto_partida(partida, titulo_personalizado=titulo_personalizado))

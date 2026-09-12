@@ -139,14 +139,14 @@ class MotorApertura:
                 for cta in cuentas.values():
                     if "activo" in cl_norm:
                         if cta.es_regularizadora:
-                            # Ejemplo: Depreciación Acumulada va al Haber
+                            # Cuentas complementarias de activo (depreciación/amortización) acreditan al Haber por saldo acreedor
                             haber_filas.append(LineaPartida(codigo=cta.codigo, nombre=cta.nombre, haber=cta.monto))
                         else:
                             debe_filas.append(LineaPartida(codigo=cta.codigo, nombre=cta.nombre, debe=cta.monto))
                     else:
                         # Pasivo o Capital
                         if cta.es_regularizadora:
-                            # Ejemplo: Pérdidas Acumuladas va al Debe
+                            # Cuentas deudoras de patrimonio (pérdidas acumuladas) debitan al Debe por saldo deudor
                             debe_filas.append(LineaPartida(codigo=cta.codigo, nombre=cta.nombre, debe=cta.monto))
                         else:
                             haber_filas.append(LineaPartida(codigo=cta.codigo, nombre=cta.nombre, haber=cta.monto))

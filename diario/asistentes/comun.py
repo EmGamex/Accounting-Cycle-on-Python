@@ -6,7 +6,8 @@ from catalogo_contable import Cuenta
 from diario.engine import GestorLibroDiario
 from diario.exceptions import DescuadrePartidaError
 from diario.models import PartidaDiario
-from reportes import generar_texto_partida
+from reportes import generar_texto_partida, imprimir_partida_rich
+from ui import imprimir_alerta, imprimir_exito
 
 # ---------------------------------------------------------------------------
 # CONSTANTES: Cuentas contables canónicas importadas del catálogo central
@@ -39,15 +40,15 @@ def guardar_y_mostrar_partida(
     """Registra la partida en el gestor y reporta el resultado en consola."""
     try:
         gestor.registrar_partida(partida)
-        print(f"\n  [OK] {mensaje_exito}:")
-        print(generar_texto_partida(partida))
+        imprimir_exito(f"{mensaje_exito}:")
+        imprimir_partida_rich(partida)
         return partida
     except DescuadrePartidaError as e:
-        print(f"\n  [ERROR DE CUADRE] {e}")
+        imprimir_alerta(f"[ERROR DE CUADRE] {e}")
         print("  La partida no se registró porque violaría el principio de partida doble.")
         return None
     except Exception as e:
-        print(f"\n  (!) Error al registrar partida: {e}")
+        imprimir_alerta(f"Error al registrar partida: {e}")
         return None
 
 

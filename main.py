@@ -34,12 +34,15 @@ def menu_principal(gestor: Optional[GestorLibroDiario] = None) -> None:
     orquestador.menu_principal(gestor=gestor)
 
 
+from ui import console
+
+
 def main() -> None:
     """Función de arranque principal del sistema con cierre limpio."""
     try:
         menu_principal()
     except KeyboardInterrupt:
-        print("\n\nSesión finalizada por el usuario. Saliendo...")
+        console.print("\n\n[bold yellow]Sesión finalizada por el usuario. Saliendo...[/bold yellow]")
         sys.exit(0)
 
 

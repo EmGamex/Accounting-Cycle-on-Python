@@ -119,20 +119,17 @@ class CatalogoService:
         if not texto_limpio:
             return None
 
-        # 1. Búsqueda exacta O(1) por código
         if texto_limpio in self._por_codigo:
             return self._por_codigo[texto_limpio]
 
         texto_norm = normalizar(texto_limpio)
         termino = SINONIMOS.get(texto_norm, texto_norm)
 
-        # 2. Búsqueda exacta O(1) por nombre normalizado o sinónimo
         if texto_norm in self._por_nombre_norm:
             return self._por_nombre_norm[texto_norm]
         if termino in self._por_nombre_norm:
             return self._por_nombre_norm[termino]
 
-        # 3. Subcadenas o límites de palabra
         terminos_busqueda = [termino]
         if texto_norm != termino:
             terminos_busqueda.append(texto_norm)

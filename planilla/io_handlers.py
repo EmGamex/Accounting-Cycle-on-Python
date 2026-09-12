@@ -3,6 +3,7 @@ import csv
 from decimal import Decimal, InvalidOperation
 from typing import List, Optional, Tuple
 
+from ui import console, imprimir_alerta, imprimir_banner
 from .config import money
 from .models import DatosEmpleado, PartidaContable, ResultadoPlanilla
 
@@ -17,15 +18,13 @@ def leer_decimal(mensaje: str, default: Optional[Decimal] = Decimal("0.00")) -> 
     try:
         return money(Decimal(entrada))
     except (InvalidOperation, ValueError):
-        print("  (!) Valor numérico no válido. Se usará el valor por defecto.")
+        imprimir_alerta("Valor numérico no válido. Se usará el valor por defecto.")
         return default
 
 
 def solicitar_datos_interactivo() -> DatosEmpleado:
     """Captura interactiva de un empleado desde la consola."""
-    print("\n" + "-" * 40)
-    print("      DATOS DEL EMPLEADO")
-    print("-" * 40)
+    imprimir_banner("DATOS DEL EMPLEADO", border_style="cyan")
 
     nombre = input("Nombre completo: ").strip() or "Empleado General"
 
@@ -67,54 +66,25 @@ def solicitar_datos_interactivo() -> DatosEmpleado:
 
 
 def imprimir_boleta(r: ResultadoPlanilla) -> None:
-    """Muestra en pantalla la boleta individual de pago."""
-    print("\n" + "=" * 58)
-    print(f" BOLETA DE PAGO: {r.empleado.upper()} ({r.departamento})")
-    print("=" * 58)
+    """Muestra en pantalla la boleta individual de pago con Rich (delega a ui.tablas)."""
+    from ui import console
+    from ui.tablas import generar_tabla_boleta
 
-    filas: List[Tuple[str, Decimal, str, bool]] = [
-        ("Sueldo Base Ordinario", r.sueldo_base, " ", True),
-        ("Comisiones sobre Ventas", r.comisiones, " ", r.comisiones > Decimal("0.00")),
-        (f"Sueldo Extra ({r.horas_extras_trabajadas}h)", r.sueldo_extraordinario, " ", r.sueldo_extraordinario > Decimal("0.00")),
-        ("Bonificación Incentivo", r.bonificacion_ley, " ", True),
-        ("TOTAL DEVENGADO", r.total_devengado, "=", True),
-        ("Cuota Laboral IGSS (4.83%)", r.descuento_igss, "-", True),
-        ("Retención ISR", r.descuento_isr, "-", r.descuento_isr > Decimal("0.00")),
-        ("Anticipo sobre Sueldos", r.prestamos_deudas, "-", r.prestamos_deudas > Decimal("0.00")),
-        ("Deudores Empleados / Otros", r.otros_descuentos, "-", r.otros_descuentos > Decimal("0.00")),
-        ("TOTAL DESCUENTOS", r.total_descuentos, "=", True),
-        ("LÍQUIDO A RECIBIR", r.liquido_recibir, "*", True),
-    ]
-
-    for etiqueta, monto, prefijo, mostrar in filas:
-        if mostrar:
-            print(f"  ({prefijo}) {etiqueta:<28} Q {monto:>10,.2f}")
-    print("=" * 58)
+    tabla = generar_tabla_boleta(r)
+    console.print(tabla)
 
 
 def imprimir_partida(p: PartidaContable) -> None:
-    """Muestra en pantalla el asiento contable en partida doble."""
-    print("\n" + "=" * 82)
-    print("                 PARTIDA CONTABLE DE SUELDOS Y SALARIOS")
-    print("=" * 82)
-    print(f"{'CÓDIGO / CUENTA':<56} | {'DEBE (Q)':>10} | {'HABER (Q)':>10}")
-    print("-" * 82)
+    """Muestra en pantalla el asiento contable en partida doble con Rich (delega a ui.tablas)."""
+    from ui import console, imprimir_alerta, imprimir_exito
+    from ui.tablas import generar_tabla_partida_nomina
 
-    for cuenta, monto in p.debe:
-        if monto > Decimal("0.00"):
-            print(f"{cuenta:<56} | {monto:>10,.2f} |")
-
-    for cuenta, monto in p.haber:
-        if monto > Decimal("0.00"):
-            print(f"{cuenta:<56} | {'':>10} | {monto:>10,.2f}")
-
-    print("-" * 82)
-    print(f"{'SUMAS IGUALES':<56} | {p.total_debe:>10,.2f} | {p.total_haber:>10,.2f}")
+    tabla = generar_tabla_partida_nomina(p)
+    console.print(tabla)
     if p.cuadra:
-        print("  [OK] La partida cuadra exactamente al centavo.")
+        imprimir_exito("La partida cuadra exactamente al centavo.")
     else:
-        print(f"  (!) Discrepancia detectada: Q {p.diferencia:,.2f}")
-    print("=" * 82 + "\n")
+        imprimir_alerta(f"Discrepancia detectada: Q{p.diferencia:,.2f}")
 
 
 # ----------------------------------------------------------------------

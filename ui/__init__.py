@@ -1,0 +1,64 @@
+﻿# -*- coding: utf-8 -*-
+"""Paquete unificado de presentación e interfaz de terminal para el Sistema Contable."""
+from ui.arbol import generar_arbol_catalogo, mostrar_catalogo_arbol
+from ui.consola import (
+    console,
+    formatear_moneda,
+    imprimir_alerta,
+    imprimir_aviso,
+    imprimir_banner,
+    imprimir_estado_ejercicio,
+    imprimir_exito,
+    imprimir_menu_opciones,
+    obtener_ancho_consola,
+)
+from ui.tablas import (
+    generar_tabla_boleta,
+    generar_tabla_cuentas_registradas,
+    generar_tabla_partida,
+    generar_tabla_partida_nomina,
+    generar_tabla_sumas_y_saldos,
+    imprimir_partida_rich,
+)
+from ui.temas import (
+    BADGE_CUADRADO,
+    BADGE_DESCUADRADO,
+    BORDE_COMPACTO,
+    BORDE_PANEL,
+    BORDE_TABLA,
+    COLOR_AVISO,
+    COLOR_ERROR,
+    COLOR_EXITO,
+    COLOR_PRIMARIO,
+    COLOR_SECUNDARIO,
+)
+
+__all__ = [
+    "BADGE_CUADRADO",
+    "BADGE_DESCUADRADO",
+    "BORDE_COMPACTO",
+    "BORDE_PANEL",
+    "BORDE_TABLA",
+    "COLOR_AVISO",
+    "COLOR_ERROR",
+    "COLOR_EXITO",
+    "COLOR_PRIMARIO",
+    "COLOR_SECUNDARIO",
+    "console",
+    "formatear_moneda",
+    "generar_arbol_catalogo",
+    "generar_tabla_boleta",
+    "generar_tabla_cuentas_registradas",
+    "generar_tabla_partida",
+    "generar_tabla_partida_nomina",
+    "generar_tabla_sumas_y_saldos",
+    "imprimir_alerta",
+    "imprimir_aviso",
+    "imprimir_banner",
+    "imprimir_estado_ejercicio",
+    "imprimir_exito",
+    "imprimir_menu_opciones",
+    "imprimir_partida_rich",
+    "mostrar_catalogo_arbol",
+    "obtener_ancho_consola",
+]

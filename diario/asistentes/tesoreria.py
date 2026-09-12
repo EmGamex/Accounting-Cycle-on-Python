@@ -14,6 +14,7 @@ from diario.operaciones import (
 )
 from diario.prompts import buscar_o_seleccionar_cuenta, pedir_fecha, pedir_monto
 
+from ui import console, imprimir_banner
 from .comun import COD_BANCOS, COD_CAJA, guardar_y_mostrar_partida
 
 
@@ -129,12 +130,10 @@ OPERACIONES_SIMPLES_MAP = {
 
 def registrar_operacion_simple_asistida(gestor: GestorLibroDiario) -> Optional[PartidaDiario]:
     """Asistente de operaciones frecuentes usando tabla de despacho."""
-    print("\n" + "=" * 65)
-    print("      REGISTRO DE OPERACIONES FRECUENTES (PAGOS Y COBROS)")
-    print("=" * 65)
-    print("  Seleccione el tipo de operación:")
+    imprimir_banner("REGISTRO DE OPERACIONES FRECUENTES (PAGOS Y COBROS)", border_style="cyan")
+    console.print("  [bold]Seleccione el tipo de operación:[/bold]")
     for clave, item in OPERACIONES_SIMPLES_MAP.items():
-        print(f"    [{clave}] {item.descripcion}")
+        console.print(f"    [bold cyan][{clave}][/bold cyan] {item.descripcion}")
 
     tipo = input("\n  Seleccione una opción [1-6] (Default [1]): ").strip() or "1"
     opcion = OPERACIONES_SIMPLES_MAP.get(tipo, OPERACIONES_SIMPLES_MAP["6"])

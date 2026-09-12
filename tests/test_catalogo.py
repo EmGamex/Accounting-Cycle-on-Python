@@ -57,5 +57,15 @@ class TestCatalogoContable(unittest.TestCase):
         self.assertEqual(activo_corriente[cat.Cuenta.CAJA], "Caja General")
 
 
+    def test_arbol_rich(self):
+        """Verifica la generación del árbol Rich y el filtrado por clase."""
+        arbol = cat.generar_arbol_rich()
+        self.assertIsNotNone(arbol)
+        self.assertEqual(len(arbol.children), 5)
+
+        arbol_activo = cat.generar_arbol_rich(filtro_clase="Activo")
+        self.assertEqual(len(arbol_activo.children), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

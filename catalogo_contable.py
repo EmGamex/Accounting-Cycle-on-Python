@@ -263,6 +263,21 @@ def buscar_cuenta(termino: str) -> List[Tuple[str, str, str, str]]:
     return coincidencias
 
 
+def generar_arbol_rich(filtro_clase: Optional[str] = None):
+    """Genera un árbol jerárquico de cuentas contables compatible con Rich (delega a ui.arbol)."""
+    from ui.arbol import generar_arbol_catalogo
+    return generar_arbol_catalogo(filtro_clase=filtro_clase)
+
+
+def mostrar_catalogo_rich(filtro_clase: Optional[str] = None, console_obj=None) -> None:
+    """Muestra el catálogo contable en consola utilizando Rich Tree (delega a ui.arbol)."""
+    try:
+        from ui.arbol import mostrar_catalogo_arbol
+        mostrar_catalogo_arbol(filtro_clase=filtro_clase, console_obj=console_obj)
+    except ImportError:
+        imprimir_arbol_catalogo()
+
+
 def imprimir_arbol_catalogo() -> None:
     """Imprime el árbol jerárquico contable formateado en consola."""
     print("=" * 75)
@@ -278,4 +293,4 @@ def imprimir_arbol_catalogo() -> None:
 
 
 if __name__ == "__main__":
-    imprimir_arbol_catalogo()
+    mostrar_catalogo_rich()

@@ -8,12 +8,12 @@ from diario.asistentes import (
     registrar_venta_asistida,
 )
 from diario.engine import GestorLibroDiario
-from reportes import generar_texto_libro_diario
+from reportes import generar_texto_libro_diario, imprimir_partida_rich
+from ui import console, imprimir_alerta, imprimir_banner
 
 # Constantes de formato y presentación
-ANCHO_BANNER = 70
 OPCION_SALIR = "0"
-MENSAJE_ALERTA_OPCION = "  (!) Opción no reconocida. Intente nuevamente."
+MENSAJE_ALERTA_OPCION = "Opción no reconocida. Intente nuevamente."
 
 
 class AccionMenu(NamedTuple):
@@ -24,19 +24,25 @@ class AccionMenu(NamedTuple):
 
 def _imprimir_encabezado() -> None:
     """Imprime el banner principal del sistema."""
-    separador = "=" * ANCHO_BANNER
-    print(separador)
-    print("         SISTEMA DE LIBRO DIARIO CONTABLE (GUATEMALA)")
-    print(separador)
+    imprimir_banner("SISTEMA DE LIBRO DIARIO CONTABLE (GUATEMALA)", border_style="cyan")
 
 
 def _imprimir_resumen_libro(gestor: GestorLibroDiario) -> None:
     """Muestra el estado actual del libro diario."""
     total_partidas = len(gestor.libro.partidas)
-    print(
-        f"\nLibro Diario Actual: {total_partidas} partida(s) registradas "
-        f"| Siguiente: Partida #{gestor.siguiente_numero}"
+    console.print(
+        f"\n[bold]Libro Diario Actual:[/bold] [cyan]{total_partidas}[/cyan] partida(s) registradas "
+        f"| [bold]Siguiente:[/bold] [green]Partida #{gestor.siguiente_numero}[/green]"
     )
+
+
+def _mostrar_libro_diario(gestor: GestorLibroDiario) -> None:
+    """Muestra todas las partidas asentadas en el diario con tablas Rich."""
+    if not gestor.libro.partidas:
+        imprimir_alerta("El Libro Diario no contiene partidas asentadas.")
+        return
+    for partida in gestor.libro.partidas:
+        imprimir_partida_rich(partida)
 
 
 def _obtener_acciones_diario() -> list[AccionMenu]:
@@ -60,17 +66,17 @@ def _obtener_acciones_diario() -> list[AccionMenu]:
         ),
         AccionMenu(
             "Ver Libro Diario Completo",
-            lambda g: print("\n" + generar_texto_libro_diario(g.libro)),
+            _mostrar_libro_diario,
         ),
     ]
 
 
 def _mostrar_menu(acciones: list[AccionMenu]) -> None:
     """Imprime las opciones disponibles del menú basándose en su posición."""
-    print("Operaciones diarias disponibles:")
+    console.print("Operaciones diarias disponibles:")
     for idx, item in enumerate(acciones, start=1):
-        print(f"  [{idx}] {item.descripcion}")
-    print(f"  [{OPCION_SALIR}] Volver / Salir")
+        console.print(f"  [bold cyan][{idx}][/bold cyan] {item.descripcion}")
+    console.print(f"  [bold dim][{OPCION_SALIR}][/bold dim] Volver / Salir")
 
 
 def iniciar_flujo_diario(gestor: Optional[GestorLibroDiario] = None) -> None:
@@ -89,10 +95,10 @@ def iniciar_flujo_diario(gestor: Optional[GestorLibroDiario] = None) -> None:
         seleccion = input(f"\nSeleccione una opción {prompt_rango}: ").strip()
 
         if seleccion == OPCION_SALIR:
-            print("\n¡Gracias por utilizar el Sistema de Libro Diario!")
+            console.print("\n[bold green]¡Gracias por utilizar el Sistema de Libro Diario![/bold green]")
             break
 
         if seleccion.isdigit() and 1 <= int(seleccion) <= len(acciones):
             acciones[int(seleccion) - 1].accion(gestor)
         else:
-            print(MENSAJE_ALERTA_OPCION)
+            imprimir_alerta(MENSAJE_ALERTA_OPCION)

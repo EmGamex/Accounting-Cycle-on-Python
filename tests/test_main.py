@@ -8,6 +8,10 @@ from main import menu_principal
 
 
 class TestMainOrquestador(unittest.TestCase):
+    def setUp(self):
+        patcher = patch("main.ARCHIVO_EJERCICIO_DEFAULT", "test_no_existe_diario.json")
+        self.mock_archivo = patcher.start()
+        self.addCleanup(patcher.stop)
 
     @patch("sys.stdout", new_callable=io.StringIO)
     @patch("builtins.input", side_effect=["0"])

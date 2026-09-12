@@ -14,9 +14,12 @@ MAX_COINCIDENCIAS = 7
 PREFIJO_ALERTA = "  (!) "
 
 
+from ui import imprimir_alerta
+
+
 def _mostrar_alerta(mensaje: str) -> None:
     """Imprime un mensaje formateado de advertencia o error en consola."""
-    print(f"{PREFIJO_ALERTA}{mensaje}")
+    imprimir_alerta(mensaje)
 
 
 def _extraer_codigo_y_nombre(cuenta: tuple) -> tuple[str, str]:
@@ -74,23 +77,19 @@ def buscar_o_seleccionar_cuenta(
             _mostrar_alerta("Debe ingresar un código o nombre de cuenta.")
             continue
 
-        # Coincidencia exacta por código
         if entrada in catalogo_codigos:
             return entrada, catalogo_codigos[entrada]
 
-        # Búsqueda por término
         coincidencias = catalogo_contable.buscar_cuenta(entrada)
         if not coincidencias:
             _mostrar_alerta(f"No se encontró ninguna cuenta para '{entrada}'. Intente nuevamente.")
             continue
 
-        # Si solo hay una coincidencia, se selecciona automáticamente
         if len(coincidencias) == 1:
             cod, nom = _extraer_codigo_y_nombre(coincidencias[0])
             print(f"      -> Seleccionada: [{cod}] {nom}")
             return cod, nom
 
-        # Múltiples coincidencias: mostrar hasta el límite definido
         opciones = coincidencias[:MAX_COINCIDENCIAS]
         print(f"  Coincidencias encontradas ({len(coincidencias)}):")
         for idx, cuenta in enumerate(opciones, 1):
