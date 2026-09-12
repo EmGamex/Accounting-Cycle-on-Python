@@ -1,10 +1,11 @@
 """Motor de reglas, correlativos y validación del Libro Diario."""
 from decimal import Decimal
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 import catalogo_contable
 from .exceptions import CorrelativoError, CuentaInvalidaError, DescuadrePartidaError, FechaInvalidaError
 from .models import LibroDiario, MovimientoLinea, PartidaDiario
+from .storage import cargar_libro_json, guardar_libro_json
 
 
 class GestorLibroDiario:
@@ -17,10 +18,10 @@ class GestorLibroDiario:
 
     def _cargar_codigos_catalogo(self) -> Dict[str, str]:
         """Indexa todos los códigos y nombres del catálogo central para búsqueda O(1)."""
-        codigos = {}
-        for _, _, codigo, nombre in catalogo_contable.listar_cuentas():
-            codigos[codigo.strip()] = nombre.strip()
-        return codigos
+        return {
+            codigo.strip(): nombre.strip()
+            for _, _, codigo, nombre in catalogo_contable.listar_cuentas()
+        }
 
     @property
     def siguiente_numero(self) -> int:
@@ -45,7 +46,8 @@ class GestorLibroDiario:
             FechaInvalidaError: Si la fecha es anterior a la última registrada (en modo estricto).
             CuentaInvalidaError: Si alguna cuenta no existe en el catálogo contable.
         """
-        if not partida.lineas:
+        lineas = partida.lineas
+        if not lineas:
             raise DescuadrePartidaError(
                 f"La partida No. {partida.numero} no contiene líneas de movimiento contable."
             )
@@ -66,26 +68,26 @@ class GestorLibroDiario:
                 f"pero se intentó registrar Partida No. {partida.numero}."
             )
 
-        if self.libro.partidas:
-            ultima_fecha = self.libro.partidas[-1].fecha
+        partidas = self.libro.partidas
+        if partidas:
+            ultima_fecha = partidas[-1].fecha
             if self.estricto_cronologico and partida.fecha < ultima_fecha:
                 raise FechaInvalidaError(
                     f"Inconsistencia cronológica: la partida No. {partida.numero} tiene fecha "
-                    f"{partida.fecha.strftime('%d/%m/%Y')}, anterior a la última registrada "
-                    f"({ultima_fecha.strftime('%d/%m/%Y')})."
+                    f"{partida.fecha:%d/%m/%Y}, anterior a la última registrada "
+                    f"({ultima_fecha:%d/%m/%Y})."
                 )
 
         if validar_catalogo:
-            for linea in partida.lineas:
+            for linea in lineas:
                 # Se permite cuenta especial o auxiliar siempre que el código base exista
-                codigo_limpio = linea.codigo.strip()
-                if codigo_limpio not in self._catalogo_codigos:
+                if not self.validar_cuenta(linea.codigo):
                     raise CuentaInvalidaError(
-                        f"La cuenta con código '{codigo_limpio}' ({linea.nombre}) no existe "
+                        f"La cuenta con código '{linea.codigo.strip()}' ({linea.nombre}) no existe "
                         f"en el Catálogo Contable Central."
                     )
 
-        self.libro.partidas.append(partida)
+        partidas.append(partida)
         return partida
 
     def totales(self) -> Tuple[Decimal, Decimal]:
@@ -99,19 +101,17 @@ class GestorLibroDiario:
     def filtrar_por_cuenta(self, codigo_o_nombre: str) -> List[Tuple[PartidaDiario, MovimientoLinea]]:
         """Busca y retorna todos los movimientos asociados a una cuenta dada."""
         termino = codigo_o_nombre.strip().lower()
-        resultados = []
-        for p in self.libro.partidas:
-            for l in p.lineas:
-                if termino == l.codigo.lower() or termino in l.nombre.lower():
-                    resultados.append((p, l))
-        return resultados
+        return [
+            (p, l)
+            for p in self.libro.partidas
+            for l in p.lineas
+            if termino == l.codigo.lower() or termino in l.nombre.lower()
+        ]
 
     def guardar_json(self, ruta_archivo: str) -> None:
         """Persiste el libro actual en formato JSON."""
-        from .storage import guardar_libro_json
         guardar_libro_json(self.libro, ruta_archivo)
 
     def cargar_json(self, ruta_archivo: str) -> None:
         """Carga y reemplaza las partidas actuales con las de un archivo JSON."""
-        from .storage import cargar_libro_json
         self.libro = cargar_libro_json(ruta_archivo)
