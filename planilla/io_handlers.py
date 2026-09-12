@@ -3,6 +3,7 @@ import csv
 from decimal import Decimal, InvalidOperation
 from typing import List, Optional, Tuple
 
+from ui import console, imprimir_alerta, imprimir_banner
 from .config import money
 from .models import DatosEmpleado, PartidaContable, ResultadoPlanilla
 
@@ -17,15 +18,13 @@ def leer_decimal(mensaje: str, default: Optional[Decimal] = Decimal("0.00")) -> 
     try:
         return money(Decimal(entrada))
     except (InvalidOperation, ValueError):
-        print("  (!) Valor numérico no válido. Se usará el valor por defecto.")
+        imprimir_alerta("Valor numérico no válido. Se usará el valor por defecto.")
         return default
 
 
 def solicitar_datos_interactivo() -> DatosEmpleado:
     """Captura interactiva de un empleado desde la consola."""
-    print("\n" + "-" * 40)
-    print("      DATOS DEL EMPLEADO")
-    print("-" * 40)
+    imprimir_banner("DATOS DEL EMPLEADO", border_style="cyan")
 
     nombre = input("Nombre completo: ").strip() or "Empleado General"
 

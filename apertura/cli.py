@@ -17,11 +17,11 @@ def pedir_monto(cuenta_nombre: str) -> Decimal:
         try:
             monto = Decimal(valor)
             if monto <= Decimal("0"):
-                print("      El monto debe ser mayor a cero.")
+                imprimir_alerta("El monto debe ser mayor a cero.")
                 continue
             return monto.quantize(Decimal("0.01"))
         except InvalidOperation:
-            print("      Cantidad inválida. Ingresa un número válido (ej. 15000.50).")
+            imprimir_alerta("Cantidad inválida. Ingresa un número válido (ej. 15000.50).")
 
 
 def pedir_clasificacion_manual(nombre: str) -> str:
@@ -74,7 +74,7 @@ def seleccionar_cuenta_interactiva(catalogo: CatalogoService, entrada: str) -> O
             tag_reg = " (Cuenta Regularizadora)" if c.es_regularizadora else ""
             print(f"   -> Seleccionada: [{c.codigo}] {c.nombre}{tag_reg}")
             return c
-        print(f"   (!) Ingrese un número entre 1 y {limite}.")
+        imprimir_alerta(f"Ingrese un número entre 1 y {limite}.")
 
 
 def iniciar_flujo_apertura(
@@ -155,8 +155,8 @@ def iniciar_flujo_apertura(
                 print(f"   -> Asignado Q {resumen.diferencia_capital:,.2f} a [{cta_cap.codigo}] {cta_cap.nombre}.")
                 resumen = motor.calcular_balance()
         else:
-            print(
-                f"[Aviso] El Pasivo y Patrimonio superan al Activo por Q {abs(resumen.diferencia_capital):,.2f}. "
+            imprimir_aviso(
+                f"El Pasivo y Patrimonio superan al Activo por Q {abs(resumen.diferencia_capital):,.2f}. "
                 "Revisa los saldos ingresados; no se asignará capital negativo automático."
             )
 

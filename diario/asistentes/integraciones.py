@@ -9,6 +9,7 @@ from diario.engine import GestorLibroDiario
 from diario.models import PartidaDiario
 from diario.prompts import pedir_fecha, pedir_monto
 
+from ui import console, imprimir_banner
 from .comun import (
     COD_BANCOS,
     COD_CAJA,
@@ -37,11 +38,9 @@ DEMO_NOMINA_EMPLEADOS = (
 
 def registrar_apertura_asistida(gestor: GestorLibroDiario) -> Optional[PartidaDiario]:
     """Genera y registra la Partida #1 a partir de un balance inicial de apertura."""
-    print("\n" + "=" * 65)
-    print("      REGISTRO DE PARTIDA No. 1 - BALANCE DE APERTURA")
-    print("=" * 65)
-    print("  [1] Generar apertura con datos de ejemplo (Caja, Bancos, Mercaderías, Capital)")
-    print("  [2] Ingresar saldos iniciales cuenta por cuenta")
+    imprimir_banner("REGISTRO DE PARTIDA No. 1 - BALANCE DE APERTURA", border_style="cyan")
+    console.print("  [bold cyan][1][/bold cyan] Generar apertura con datos de ejemplo (Caja, Bancos, Mercaderías, Capital)")
+    console.print("  [bold cyan][2][/bold cyan] Ingresar saldos iniciales cuenta por cuenta")
     opcion = input("\nSeleccione [1]: ").strip() or "1"
 
     if opcion == "1":
@@ -76,11 +75,9 @@ def registrar_apertura_asistida(gestor: GestorLibroDiario) -> Optional[PartidaDi
 
 def registrar_nomina_asistida(gestor: GestorLibroDiario) -> Optional[PartidaDiario]:
     """Genera y registra la partida de sueldos desde el módulo de planilla."""
-    print("\n" + "=" * 65)
-    print("           REGISTRO DE PARTIDA DE SUELDOS Y SALARIOS")
-    print("=" * 65)
-    print("  [1] Generar nómina de ejemplo (Administración y Ventas)")
-    print("  [2] Ingresar empleado manualmente")
+    imprimir_banner("REGISTRO DE PARTIDA DE SUELDOS Y SALARIOS", border_style="cyan")
+    console.print("  [bold cyan][1][/bold cyan] Generar nómina de ejemplo (Administración y Ventas)")
+    console.print("  [bold cyan][2][/bold cyan] Ingresar empleado manualmente")
     opcion = input("\nSeleccione [1]: ").strip() or "1"
 
     if opcion == "1":

@@ -5,14 +5,13 @@ from diario.engine import GestorLibroDiario
 from diario.models import PartidaDiario
 from diario.prompts import buscar_o_seleccionar_cuenta, pedir_fecha, pedir_monto
 
+from ui import console, imprimir_alerta, imprimir_banner
 from .comun import guardar_y_mostrar_partida
 
 
 def registrar_partida_libre_asistida(gestor: GestorLibroDiario) -> Optional[PartidaDiario]:
     """Permite armar un asiento contable línea por línea con validación estricta de cuadre."""
-    print("\n" + "=" * 65)
-    print("       REGISTRO DE PARTIDA LIBRE (LÍNEA POR LÍNEA)")
-    print("=" * 65)
+    imprimir_banner("REGISTRO DE PARTIDA LIBRE (LÍNEA POR LÍNEA)", border_style="cyan")
     glosa = input("Glosa o explicación de la partida: ").strip() or "Asiento de diario personalizado"
     doc = input("Documento de soporte (opcional): ").strip() or None
     fecha = pedir_fecha()
@@ -24,17 +23,17 @@ def registrar_partida_libre_asistida(gestor: GestorLibroDiario) -> Optional[Part
         documento_soporte=doc,
     )
 
-    print("\n--- INGRESO DE LÍNEAS (Escriba 'fin' en el código para terminar) ---")
+    console.print("\n[bold]INGRESO DE LÍNEAS (Escriba 'fin' en el código para terminar)[/bold]")
     while True:
-        print(
-            f"  Estado actual -> Debe: Q {partida.total_debe:,.2f} | "
-            f"Haber: Q {partida.total_haber:,.2f} | Diferencia: Q {partida.diferencia:,.2f}"
+        console.print(
+            f"  Estado actual -> Debe: [green]Q {partida.total_debe:,.2f}[/green] | "
+            f"Haber: [green]Q {partida.total_haber:,.2f}[/green] | Diferencia: [yellow]Q {partida.diferencia:,.2f}[/yellow]"
         )
         col = input("  ¿Imputar al Debe [D] o al Haber [H]? (o 'fin' para concluir): ").strip().upper()
         if col == "FIN":
             break
         if col not in ("D", "H"):
-            print("  (!) Opción no válida. Ingrese D para Debe o H para Haber.")
+            imprimir_alerta("Opción no válida. Ingrese D para Debe o H para Haber.")
             continue
 
         cod, nom = buscar_o_seleccionar_cuenta("  Código o nombre de cuenta", gestor=gestor)

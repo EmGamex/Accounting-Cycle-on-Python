@@ -14,9 +14,12 @@ MAX_COINCIDENCIAS = 7
 PREFIJO_ALERTA = "  (!) "
 
 
+from ui import imprimir_alerta
+
+
 def _mostrar_alerta(mensaje: str) -> None:
     """Imprime un mensaje formateado de advertencia o error en consola."""
-    print(f"{PREFIJO_ALERTA}{mensaje}")
+    imprimir_alerta(mensaje)
 
 
 def _extraer_codigo_y_nombre(cuenta: tuple) -> tuple[str, str]:

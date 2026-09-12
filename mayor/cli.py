@@ -57,7 +57,7 @@ def _consultar_t_grafica_individual(gestor_mayor: GestorLibroMayor) -> None:
     """Solicita código o nombre de cuenta y muestra su T-gráfica."""
     mayor = gestor_mayor.sincronizar()
     if not mayor.cuentas:
-        print("\n  (!) El Libro Mayor no tiene cuentas registradas.")
+        imprimir_alerta("El Libro Mayor no tiene cuentas registradas.")
         return
 
     termino = input("\nIngrese código o nombre de la cuenta a consultar: ").strip()
@@ -66,20 +66,20 @@ def _consultar_t_grafica_individual(gestor_mayor: GestorLibroMayor) -> None:
 
     coincidencias = mayor.buscar_cuentas(termino)
     if not coincidencias:
-        print(f"  (!) No se encontró ninguna cuenta que coincida con '{termino}'.")
+        imprimir_alerta(f"No se encontró ninguna cuenta que coincida con '{termino}'.")
         return
 
     if len(coincidencias) == 1:
         cuenta = coincidencias[0]
     else:
-        print(f"\nSe encontraron {len(coincidencias)} cuentas:")
+        console.print(f"\nSe encontraron [cyan]{len(coincidencias)}[/cyan] cuentas:")
         for idx, c in enumerate(coincidencias, start=1):
-            print(f"  [{idx}] [{c.codigo}] {c.nombre}")
+            console.print(f"  [bold cyan][{idx}][/bold cyan] [{c.codigo}] {c.nombre}")
         sel = input("Seleccione el número de cuenta: ").strip()
         if sel.isdigit() and 1 <= int(sel) <= len(coincidencias):
             cuenta = coincidencias[int(sel) - 1]
         else:
-            print("  (!) Selección cancelada.")
+            imprimir_alerta("Selección cancelada.")
             return
 
     print("\n" + linea_simple(55))
