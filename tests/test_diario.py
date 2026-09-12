@@ -419,5 +419,61 @@ class TestOperacionesComercialesYReportes(unittest.TestCase):
         self.assertTrue(self.gestor.libro.cuadra)
 
 
+class TestModularidadOperaciones(unittest.TestCase):
+    """Verifica que el subpaquete diario.operaciones exponga tanto sus submódulos como el facade."""
+
+    def test_importaciones_submodulos_directos(self):
+        from diario.operaciones.calculos import (
+            FACTOR_BASE,
+            TASA_IVA,
+            TWO_PLACES,
+            calcular_desglose_iva,
+            distribuir_canales,
+            normalizar_porcentaje,
+        )
+        from diario.operaciones.base import crear_partida_simple
+        from diario.operaciones.comercial import crear_partida_compra, crear_partida_venta
+        from diario.operaciones.tesoreria import (
+            crear_partida_abono_cliente,
+            crear_partida_abono_prestamo,
+            crear_partida_abono_proveedor,
+            crear_partida_deposito_banco,
+            crear_partida_retiro_banco,
+        )
+
+        # 1. Validar utilidades matemáticas
+        self.assertEqual(TASA_IVA, Decimal("0.12"))
+        self.assertEqual(FACTOR_BASE, Decimal("1.12"))
+        self.assertEqual(normalizar_porcentaje(50), Decimal("0.5000"))
+        self.assertEqual(normalizar_porcentaje("0.50"), Decimal("0.5000"))
+
+        base, iva = calcular_desglose_iva(Decimal("112.00"))
+        self.assertEqual(base, Decimal("100.00"))
+        self.assertEqual(iva, Decimal("12.00"))
+
+        # 2. Validar distribución de canales con centavos
+        canales = [
+            ("1101", "Caja", Decimal("0.3333"), None),
+            ("1102", "Bancos", Decimal("0.6667"), None),
+        ]
+        dist = distribuir_canales(Decimal("100.00"), canales)
+        suma_canales = sum(m for _, _, m in dist)
+        self.assertEqual(suma_canales, Decimal("100.00"))
+
+        # 3. Validar generadores
+        p_base = crear_partida_simple(
+            numero=1,
+            fecha=date(2026, 1, 1),
+            glosa="Asiento base",
+            monto=Decimal("50.00"),
+            codigo_debe="1101",
+            nombre_debe="Caja",
+            codigo_haber="1102",
+            nombre_haber="Bancos",
+        )
+        self.assertTrue(p_base.cuadra)
+
+
 if __name__ == "__main__":
     unittest.main()
+
