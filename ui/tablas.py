@@ -1,9 +1,10 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """Componente especializado en la construcción y renderizado de tablas Rich para el sistema contable."""
 from decimal import Decimal
 from typing import Any, List, Optional, Sequence, Tuple
 from rich.table import Table
 
+from config import FORMATO_FECHA, SIMBOLO_MONEDA
 from ui.consola import console, formatear_moneda, imprimir_alerta, imprimir_exito
 from ui.temas import (
     BORDE_TABLA,
@@ -24,15 +25,15 @@ def generar_tabla_partida(
     if titulo_personalizado:
         titulo = titulo_personalizado
     elif fecha_obj and hasattr(fecha_obj, "strftime"):
-        titulo = f"Partida No. {partida.numero} ({fecha_obj.strftime('%d/%m/%Y')})"
+        titulo = f"Partida No. {partida.numero} ({fecha_obj.strftime(FORMATO_FECHA)})"
     else:
         titulo = f"Partida No. {partida.numero}"
 
     tabla = Table(title=titulo, box=BORDE_TABLA, expand=False, show_footer=True)
     tabla.add_column("Código", style="dim cyan", no_wrap=True)
     tabla.add_column("Cuenta / Concepto", style=COLOR_TEXTO)
-    tabla.add_column("Debe (Q)", justify="right", style=COLOR_EXITO, footer_style=COLOR_EXITO, no_wrap=True)
-    tabla.add_column("Haber (Q)", justify="right", style=COLOR_EXITO, footer_style=COLOR_EXITO, no_wrap=True)
+    tabla.add_column(f"Debe ({SIMBOLO_MONEDA})", justify="right", style=COLOR_EXITO, footer_style=COLOR_EXITO, no_wrap=True)
+    tabla.add_column(f"Haber ({SIMBOLO_MONEDA})", justify="right", style=COLOR_EXITO, footer_style=COLOR_EXITO, no_wrap=True)
 
     for linea in partida.lineas:
         es_cargo = getattr(linea, "es_cargo", None)

@@ -7,7 +7,7 @@ from diario.engine import GestorLibroDiario
 from diario.exceptions import DescuadrePartidaError
 from diario.models import PartidaDiario
 from reportes import generar_texto_partida, imprimir_partida_rich
-from ui import imprimir_alerta, imprimir_exito
+from ui import console, imprimir_alerta, imprimir_exito
 
 # ---------------------------------------------------------------------------
 # CONSTANTES: Cuentas contables canónicas importadas del catálogo central
@@ -27,9 +27,9 @@ CERO = Decimal("0.00")
 
 class DistribucionPago(NamedTuple):
     """Porcentajes de liquidación calculados para una compra o venta."""
-    pct_efectivo: Decimal = CERO
     pct_banco: Decimal = CERO
     pct_credito: Decimal = CERO
+    pct_efectivo: Decimal = CERO
 
 
 def guardar_y_mostrar_partida(
@@ -45,7 +45,7 @@ def guardar_y_mostrar_partida(
         return partida
     except DescuadrePartidaError as e:
         imprimir_alerta(f"[ERROR DE CUADRE] {e}")
-        print("  La partida no se registró porque violaría el principio de partida doble.")
+        imprimir_alerta("La partida no se registró porque violaría el principio de partida doble.")
         return None
     except Exception as e:
         imprimir_alerta(f"Error al registrar partida: {e}")
@@ -58,22 +58,27 @@ def capturar_condicion_liquidacion(
     pct_banco_mixto_default: str = "20",
 ) -> DistribucionPago:
     """Captura y calcula los porcentajes para operaciones de Contado, Crédito o Mixto."""
-    print(f"\n  Condición de {etiqueta_tipo}:")
-    print("    [1] 100% Contado (Bancos o Caja)")
-    print(f"    [2] 100% Crédito ({etiqueta_credito})")
-    print("    [3] Mixto (ej. Transferencia Bancaria + Saldo a Crédito)")
+    console.print(f"\n  Condición de {etiqueta_tipo}:")
+    console.print("    [1] 100% Contado (Bancos o Caja)")
+    console.print(f"    [2] 100% Crédito ({etiqueta_credito})")
+    console.print("    [3] Mixto (ej. Transferencia Bancaria + Saldo a Crédito)")
     cond = input("  Seleccione [1-3] (Default [1]): ").strip() or "1"
 
     if cond == "2":
         return DistribucionPago(pct_credito=UNO)
 
     if cond == "3":
-        pct_in = input(
-            f"    % a liquidar por Banco/Transferencia (ej. {pct_banco_mixto_default}): "
-        ).strip() or pct_banco_mixto_default
-        pct_banco = Decimal(pct_in) / CIEN
-        pct_credito = UNO - pct_banco
-        print(f"    -> Se asignará {pct_banco * 100:.1f}% a Bancos y {pct_credito * 100:.1f}% a {etiqueta_credito}.")
+        pct_in = (
+            input(f"    % a liquidar por Banco/Transferencia (ej. {pct_banco_mixto_default}): ").strip()
+            or pct_banco_mixto_default
+        )
+        try:
+            pct_banco = Decimal(pct_in) / CIEN
+            pct_credito = UNO - pct_banco
+        except Exception:
+            pct_banco = Decimal("0.20")
+            pct_credito = Decimal("0.80")
+        console.print(f"    -> Se asignará {pct_banco * 100:.1f}% a Bancos y {pct_credito * 100:.1f}% a {etiqueta_credito}.")
         return DistribucionPago(pct_banco=pct_banco, pct_credito=pct_credito)
 
     # Caso 1: 100% Contado

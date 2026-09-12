@@ -2,9 +2,10 @@
 from decimal import Decimal, ROUND_HALF_UP
 from typing import List, Optional, Tuple
 
-TWO_PLACES = Decimal("0.01")
-TASA_IVA = Decimal("0.12")
-FACTOR_BASE = Decimal("1.12")
+from config import PRECISION_CENTAVOS, TASA_IVA
+
+TWO_PLACES = PRECISION_CENTAVOS
+FACTOR_BASE = Decimal("1.00") + TASA_IVA
 
 
 def normalizar_porcentaje(valor: Decimal | float | int | str) -> Decimal:

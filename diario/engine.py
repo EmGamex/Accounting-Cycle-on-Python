@@ -1,11 +1,17 @@
 """Motor de reglas, correlativos y validación del Libro Diario."""
+from collections import defaultdict
 from decimal import Decimal
 from typing import Dict, List, Tuple
 
 import catalogo_contable
+from config import FORMATO_FECHA, SIMBOLO_MONEDA
 from .exceptions import CorrelativoError, CuentaInvalidaError, DescuadrePartidaError, FechaInvalidaError
 from .models import LibroDiario, MovimientoLinea, PartidaDiario
 from .storage import cargar_libro_json, guardar_libro_json
+
+# Constantes del dominio del Libro Diario para control de correlativos
+CORRELATIVO_INICIAL: int = 1
+CORRELATIVO_MINIMO_VALIDO: int = 1
 
 
 class GestorLibroDiario:
@@ -26,7 +32,7 @@ class GestorLibroDiario:
     @property
     def siguiente_numero(self) -> int:
         """Retorna el siguiente número correlativo esperado."""
-        return len(self.libro.partidas) + 1
+        return len(self.libro.partidas) + CORRELATIVO_INICIAL
 
     def validar_cuenta(self, codigo: str) -> bool:
         """Verifica si un código contable existe en el catálogo oficial."""
@@ -55,12 +61,13 @@ class GestorLibroDiario:
         if not partida.cuadra:
             raise DescuadrePartidaError(
                 f"Partida No. {partida.numero} descuadrada: "
-                f"Debe = Q{partida.total_debe}, Haber = Q{partida.total_haber}, "
-                f"Diferencia = Q{partida.diferencia}"
+                f"Debe = {SIMBOLO_MONEDA}{partida.total_debe}, "
+                f"Haber = {SIMBOLO_MONEDA}{partida.total_haber}, "
+                f"Diferencia = {SIMBOLO_MONEDA}{partida.diferencia}"
             )
 
         esperado = self.siguiente_numero
-        if auto_correlativo or partida.numero <= 0:
+        if auto_correlativo or partida.numero < CORRELATIVO_MINIMO_VALIDO:
             partida.numero = esperado
         elif partida.numero != esperado:
             raise CorrelativoError(
@@ -74,8 +81,8 @@ class GestorLibroDiario:
             if self.estricto_cronologico and partida.fecha < ultima_fecha:
                 raise FechaInvalidaError(
                     f"Inconsistencia cronológica: la partida No. {partida.numero} tiene fecha "
-                    f"{partida.fecha:%d/%m/%Y}, anterior a la última registrada "
-                    f"({ultima_fecha:%d/%m/%Y})."
+                    f"{partida.fecha.strftime(FORMATO_FECHA)}, anterior a la última registrada "
+                    f"({ultima_fecha.strftime(FORMATO_FECHA)})."
                 )
 
         if validar_catalogo:
@@ -97,6 +104,26 @@ class GestorLibroDiario:
     def obtener_partidas(self) -> List[PartidaDiario]:
         """Retorna la lista de todas las partidas registradas."""
         return list(self.libro.partidas)
+
+    def agrupar_movimientos_por_cuenta(self) -> Dict[str, List[Tuple[PartidaDiario, MovimientoLinea]]]:
+        """Agrupa eficientemente en O(N) todos los movimientos del libro indexados por código de cuenta."""
+        agrupado: Dict[str, List[Tuple[PartidaDiario, MovimientoLinea]]] = defaultdict(list)
+        for partida in self.libro.partidas:
+            for linea in partida.lineas:
+                agrupado[linea.codigo.strip()].append((partida, linea))
+        return dict(agrupado)
+
+    def totales_por_cuenta(self) -> Dict[str, Dict[str, Decimal]]:
+        """Calcula en O(N) la sumatoria acumulada de Debe y Haber agrupada por cuenta."""
+        resumen: Dict[str, Dict[str, Decimal]] = defaultdict(
+            lambda: {"debe": Decimal("0.00"), "haber": Decimal("0.00")}
+        )
+        for partida in self.libro.partidas:
+            for linea in partida.lineas:
+                cod = linea.codigo.strip()
+                resumen[cod]["debe"] += linea.debe
+                resumen[cod]["haber"] += linea.haber
+        return dict(resumen)
 
     def filtrar_por_cuenta(self, codigo_o_nombre: str) -> List[Tuple[PartidaDiario, MovimientoLinea]]:
         """Busca y retorna todos los movimientos asociados a una cuenta dada."""

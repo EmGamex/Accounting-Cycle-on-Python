@@ -18,6 +18,7 @@ from reportes.t_graficas import (
 from config import MENSAJE_ALERTA_OPCION, OPCION_SALIR
 from ui import (
     console,
+    formatear_moneda,
     imprimir_alerta,
     imprimir_aviso,
     imprimir_banner,
@@ -46,9 +47,11 @@ def _imprimir_resumen_mayor(gestor_mayor: GestorLibroMayor) -> None:
     num_ctas = len(mayor.cuentas)
     estado = "CUADRADO" if mayor.cuadra or num_ctas == 0 else "DESCUADRADO"
     color = "green" if mayor.cuadra or num_ctas == 0 else "red"
+    debe_fmt = formatear_moneda(mayor.total_debe)
+    haber_fmt = formatear_moneda(mayor.total_haber)
     console.print(
         f"\n[bold]Libro Mayor Actual:[/bold] [cyan]{num_ctas}[/cyan] cuenta(s) activa(s) | "
-        f"Debe: [green]Q{mayor.total_debe:,.2f}[/green] | Haber: [green]Q{mayor.total_haber:,.2f}[/green] "
+        f"Debe: [green]{debe_fmt}[/green] | Haber: [green]{haber_fmt}[/green] "
         f"[[bold {color}]{estado}[/bold {color}]]"
     )
 
@@ -56,7 +59,7 @@ def _imprimir_resumen_mayor(gestor_mayor: GestorLibroMayor) -> None:
 def _ver_todas_t_graficas(gestor_mayor: GestorLibroMayor) -> None:
     """Muestra todas las T-gráficas generadas en consola."""
     mayor = gestor_mayor.sincronizar()
-    print("\n" + generar_texto_todas_t_graficas(mayor))
+    console.print("\n" + generar_texto_todas_t_graficas(mayor))
 
 
 def _consultar_t_grafica_individual(gestor_mayor: GestorLibroMayor) -> None:
@@ -86,15 +89,15 @@ def _consultar_t_grafica_individual(gestor_mayor: GestorLibroMayor) -> None:
             imprimir_alerta("Selección cancelada.")
             return
 
-    print("\n" + linea_simple(55))
-    print(generar_texto_t_grafica(cuenta))
-    print(linea_simple(55))
+    console.print("\n" + linea_simple(55))
+    console.print(generar_texto_t_grafica(cuenta))
+    console.print(linea_simple(55))
 
 
 def _ver_mayor_formal(gestor_mayor: GestorLibroMayor) -> None:
     """Muestra el reporte del Libro Mayor a 3 columnas en consola."""
     mayor = gestor_mayor.sincronizar()
-    print("\n" + generar_texto_libro_mayor_formal(mayor))
+    console.print("\n" + generar_texto_libro_mayor_formal(mayor))
 
 
 def _ver_resumen_sumas_y_saldos(gestor_mayor: GestorLibroMayor) -> None:

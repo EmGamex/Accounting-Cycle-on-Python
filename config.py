@@ -23,6 +23,7 @@ MENSAJE_ALERTA_OPCION: str = "Opción no reconocida. Intente nuevamente."
 # MONEDA Y FORMATO
 # -----------------------------------------------------------------------------
 SIMBOLO_MONEDA: str = "Q"
+FORMATO_FECHA: str = "%d/%m/%Y"
 PRECISION_CENTAVOS: Decimal = Decimal("0.01")
 CERO_MONETARIO: Decimal = Decimal("0.00")
 

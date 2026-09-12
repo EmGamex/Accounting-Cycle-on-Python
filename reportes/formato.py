@@ -1,9 +1,9 @@
-"""Utilidades transversales de formateo monetario y diseño de texto para reportes contables."""
+from config import SIMBOLO_MONEDA
 from decimal import Decimal
 from typing import Optional
 
 
-def formato_moneda(monto: Decimal, simbolo: str = "Q", ancho: Optional[int] = None) -> str:
+def formato_moneda(monto: Decimal, simbolo: str = SIMBOLO_MONEDA, ancho: Optional[int] = None) -> str:
     """Formatea un monto decimal a la convención oficial guatemalteca (Q #,##0.00).
 
     Args:

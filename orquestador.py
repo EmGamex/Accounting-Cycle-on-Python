@@ -227,7 +227,7 @@ def menu_principal(gestor: Optional[GestorLibroDiario] = None) -> None:
         _imprimir_estado_ejercicio(gestor)
         acciones = _obtener_acciones_principales(gestor)
 
-        print("\nMódulos principales disponibles:")
+        console.print("\nMódulos principales disponibles:")
         _mostrar_opciones_con_indices(acciones, texto_salir="Salir")
 
         prompt_rango = f"[1-{len(acciones)}, {OPCION_SALIR}]"
