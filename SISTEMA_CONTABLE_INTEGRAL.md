@@ -326,8 +326,8 @@ flowchart LR
   - [x] Crear el módulo `diario/` con la estructura unificada de `PartidaDiario`.
   - [x] Crear conectores para que `apertura` y `planilla` alimenten directamente al Diario.
   - [x] Permitir ingreso de partidas operativas adicionales (ventas, compras, cobros, pagos).
-* **Fase 3 (Próximo Paso Inmediato):**
-  - [ ] Crear el módulo `mayor/` que agrupe automáticamente el Diario y genere las T-Gráficas.
+* **Fase 3 (En Progreso):**
+  - [x] Crear el módulo `mayor/` que agrupe automáticamente el Diario y genere las T-Gráficas.
   - [ ] Crear el módulo `balance/` que tome el Mayor y produzca la matriz de 4 Columnas.
 * **Fase 4:**
   - [ ] Implementar los exportadores a Excel (`openpyxl`) para generar el libro maestro de 6 hojas listo para impresión y entrega legal.

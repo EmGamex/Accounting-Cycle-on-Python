@@ -5,6 +5,7 @@ from typing import Optional
 from apertura.cli import iniciar_flujo_apertura
 from planilla.cli import iniciar_flujo_planillas
 from diario.cli import iniciar_flujo_diario
+from mayor.cli import iniciar_flujo_mayor
 from diario.engine import GestorLibroDiario
 
 import orquestador
@@ -26,6 +27,7 @@ def menu_principal(gestor: Optional[GestorLibroDiario] = None) -> None:
     orquestador.iniciar_flujo_apertura = getattr(this_module, "iniciar_flujo_apertura", orquestador.iniciar_flujo_apertura)
     orquestador.iniciar_flujo_planillas = getattr(this_module, "iniciar_flujo_planillas", orquestador.iniciar_flujo_planillas)
     orquestador.iniciar_flujo_diario = getattr(this_module, "iniciar_flujo_diario", orquestador.iniciar_flujo_diario)
+    orquestador.iniciar_flujo_mayor = getattr(this_module, "iniciar_flujo_mayor", orquestador.iniciar_flujo_mayor)
     orquestador.menu_persistencia = getattr(this_module, "menu_persistencia", orquestador.menu_persistencia)
     orquestador.ARCHIVO_EJERCICIO_DEFAULT = getattr(this_module, "ARCHIVO_EJERCICIO_DEFAULT", orquestador.ARCHIVO_EJERCICIO_DEFAULT)
 
