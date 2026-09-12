@@ -8,7 +8,7 @@ from diario.asistentes import (
     registrar_venta_asistida,
 )
 from diario.engine import GestorLibroDiario
-from diario.reportes import generar_texto_libro_diario
+from reportes import generar_texto_libro_diario
 
 
 def iniciar_flujo_diario(gestor: Optional[GestorLibroDiario] = None) -> None:

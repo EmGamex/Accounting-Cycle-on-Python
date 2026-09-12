@@ -25,7 +25,7 @@ from .operaciones import (
     crear_partida_venta,
 )
 from .cli import iniciar_flujo_diario
-from .reportes import (
+from reportes import (
     generar_texto_libro_diario,
     generar_texto_partida,
 )

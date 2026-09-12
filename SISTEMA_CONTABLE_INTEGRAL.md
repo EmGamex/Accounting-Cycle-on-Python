@@ -216,7 +216,14 @@ flowchart TB
 │   ├── models.py                   # Dataclasses de apertura y balance
 │   ├── catalogo.py                 # Servicio de consulta del catálogo
 │   ├── contabilidad.py             # Motor de cuadre y cálculo de capital
-│   └── reportes.py                 # Generador de reportes de texto
+│   └── cli.py                      # CLI interactivo y flujo de apertura
+│
+├── reportes/                       # Paquete unificado de reportes contables y texto
+│   ├── formato.py                  # Formateo canónico de moneda (Q) y utilidades visuales
+│   ├── partidas.py                 # Renderizador universal de asientos contables
+│   ├── libro_diario.py             # Emisión y resumen formal del Libro Diario
+│   ├── balance.py                  # Balance de Apertura y exportación
+│   └── exportador.py               # Guardado físico seguro en disco (UTF-8)
 │
 ├── planilla/                       # [Módulo 5] Nómina y Prestaciones
 │   ├── models.py                   # Dataclasses de empleados y boletas

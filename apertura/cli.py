@@ -6,7 +6,7 @@ from typing import Optional, Tuple
 from apertura.catalogo import CatalogoService
 from apertura.contabilidad import MotorApertura
 from apertura.models import CuentaCatalogo, PartidaApertura, ResumenBalance
-from apertura.reportes import exportar_reporte, generar_texto_balance, generar_texto_partida
+from reportes import exportar_reporte, generar_texto_balance, generar_texto_partida
 
 
 def pedir_monto(cuenta_nombre: str) -> Decimal:
