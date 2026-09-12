@@ -7,7 +7,18 @@ from apertura.catalogo import CatalogoService
 from apertura.contabilidad import MotorApertura
 from apertura.models import CuentaCatalogo, PartidaApertura, ResumenBalance
 from reportes import exportar_reporte, generar_texto_balance, generar_texto_partida, imprimir_partida_rich
-from ui import console, imprimir_alerta, imprimir_aviso, imprimir_banner, imprimir_exito
+from ui import (
+    console,
+    formatear_moneda,
+    imprimir_alerta,
+    imprimir_aviso,
+    imprimir_banner,
+    imprimir_coincidencias_cuentas,
+    imprimir_cuenta_seleccionada,
+    imprimir_exito,
+    imprimir_menu_clasificacion,
+    imprimir_resumen_balance_apertura,
+)
 
 
 def pedir_monto(cuenta_nombre: str) -> Decimal:
@@ -26,11 +37,7 @@ def pedir_monto(cuenta_nombre: str) -> Decimal:
 
 def pedir_clasificacion_manual(nombre: str) -> str:
     """Solicita al usuario clasificar manualmente una cuenta no hallada en catálogo."""
-    console.print(f"\n   [bold yellow][!][/bold yellow] '{nombre}' no se encontró en el catálogo.")
-    print("   Clasifícala:")
-    print("   1. Activo Corriente     | 2. Activo No Corriente")
-    print("   3. Pasivo Corriente    | 4. Pasivo No Corriente")
-    print("   5. Capital / Patrimonio")
+    imprimir_menu_clasificacion(nombre)
     return input("   Opción (1-5): ").strip()
 
 
@@ -55,15 +62,11 @@ def seleccionar_cuenta_interactiva(catalogo: CatalogoService, entrada: str) -> O
 
     if len(coincidencias) == 1:
         c = coincidencias[0]
-        tag_reg = " (Cuenta Regularizadora)" if c.es_regularizadora else ""
-        print(f"   -> Seleccionada: [{c.codigo}] {c.nombre}{tag_reg}")
+        imprimir_cuenta_seleccionada(c)
         return c
 
-    print(f"\n   Coincidencias encontradas ({len(coincidencias)}):")
     limite = min(len(coincidencias), 8)
-    for idx, c in enumerate(coincidencias[:limite], 1):
-        tag_reg = " (-)" if c.es_regularizadora else "    "
-        print(f"     [{idx}] {c.codigo:<9} {tag_reg} {c.nombre}")
+    imprimir_coincidencias_cuentas(coincidencias, limite=limite)
 
     while True:
         sel = input("   Elija el número de la cuenta o presione Enter para cancelar: ").strip()
@@ -71,8 +74,7 @@ def seleccionar_cuenta_interactiva(catalogo: CatalogoService, entrada: str) -> O
             return None
         if sel.isdigit() and 1 <= int(sel) <= limite:
             c = coincidencias[int(sel) - 1]
-            tag_reg = " (Cuenta Regularizadora)" if c.es_regularizadora else ""
-            print(f"   -> Seleccionada: [{c.codigo}] {c.nombre}{tag_reg}")
+            imprimir_cuenta_seleccionada(c)
             return c
         imprimir_alerta(f"Ingrese un número entre 1 y {limite}.")
 
@@ -125,38 +127,33 @@ def iniciar_flujo_apertura(
             else:
                 continue
         else:
-            print(f"   Ubicación   : {cuenta_info.clase} -> {cuenta_info.subgrupo}")
+            console.print(f"   Ubicación   : [dim]{cuenta_info.clase} -> {cuenta_info.subgrupo}[/dim]")
 
         monto = pedir_monto(cuenta_info.nombre)
         registrada = motor.agregar_o_acumular(cuenta_info, monto)
-        imprimir_exito(f"Registrado: Q{registrada.monto:,.2f} en '{registrada.nombre}' ({registrada.subgrupo}).")
+        imprimir_exito(f"Registrado: {formatear_moneda(registrada.monto)} en '{registrada.nombre}' ({registrada.subgrupo}).")
 
     if not motor.items:
-        print("\nNo se registraron cuentas. Saliendo del programa.")
+        imprimir_aviso("No se registraron cuentas. Saliendo del programa.")
         return None, None
 
     resumen = motor.calcular_balance()
 
     if resumen.diferencia_capital != Decimal("0.00"):
-        print("\n" + "-" * 75)
-        print(
-            f"Activo Neto: Q {resumen.total_activo:,.2f} | "
-            f"Pasivo: Q {resumen.total_pasivo:,.2f} | "
-            f"Patrimonio: Q {resumen.total_patrimonio:,.2f}"
-        )
+        imprimir_resumen_balance_apertura(resumen)
 
         if resumen.diferencia_capital > Decimal("0.00"):
-            print(f"Capital residual necesario para cuadrar: Q {resumen.diferencia_capital:,.2f}")
+            console.print(f"  Capital residual necesario para cuadrar: [bold yellow]{formatear_moneda(resumen.diferencia_capital)}[/bold yellow]")
             ajustar = input("¿Deseas asignar esta diferencia a la cuenta de Capital? (s/n): ").strip().lower()
 
             if ajustar in ("s", "si", "y", "yes"):
                 cta_cap = catalogo.obtener_cuenta_capital()
                 motor.asignar_diferencia_capital(cta_cap, resumen.diferencia_capital)
-                print(f"   -> Asignado Q {resumen.diferencia_capital:,.2f} a [{cta_cap.codigo}] {cta_cap.nombre}.")
+                console.print(f"   [green]->[/green] Asignado [bold green]{formatear_moneda(resumen.diferencia_capital)}[/bold green] a [[cyan]{cta_cap.codigo}[/cyan]] {cta_cap.nombre}.")
                 resumen = motor.calcular_balance()
         else:
             imprimir_aviso(
-                f"El Pasivo y Patrimonio superan al Activo por Q {abs(resumen.diferencia_capital):,.2f}. "
+                f"El Pasivo y Patrimonio superan al Activo por {formatear_moneda(abs(resumen.diferencia_capital))}. "
                 "Revisa los saldos ingresados; no se asignará capital negativo automático."
             )
 
@@ -164,7 +161,7 @@ def iniciar_flujo_apertura(
     partida = motor.generar_partida_apertura(numero=numero_partida)
 
     if imprimir_reportes:
-        print("\n" + generar_texto_balance(resumen))
+        console.print("\n" + generar_texto_balance(resumen))
         imprimir_partida_rich(partida)
 
     # Preguntar si se desea exportar a archivo si está habilitado

@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """Paquete unificado de presentación e interfaz de terminal para el Sistema Contable."""
 from ui.arbol import generar_arbol_catalogo, mostrar_catalogo_arbol
 from ui.consola import (
@@ -7,9 +7,13 @@ from ui.consola import (
     imprimir_alerta,
     imprimir_aviso,
     imprimir_banner,
+    imprimir_coincidencias_cuentas,
+    imprimir_cuenta_seleccionada,
     imprimir_estado_ejercicio,
     imprimir_exito,
+    imprimir_menu_clasificacion,
     imprimir_menu_opciones,
+    imprimir_resumen_balance_apertura,
     obtener_ancho_consola,
 )
 from ui.tablas import (
@@ -55,10 +59,14 @@ __all__ = [
     "imprimir_alerta",
     "imprimir_aviso",
     "imprimir_banner",
+    "imprimir_coincidencias_cuentas",
+    "imprimir_cuenta_seleccionada",
     "imprimir_estado_ejercicio",
     "imprimir_exito",
+    "imprimir_menu_clasificacion",
     "imprimir_menu_opciones",
     "imprimir_partida_rich",
+    "imprimir_resumen_balance_apertura",
     "mostrar_catalogo_arbol",
     "obtener_ancho_consola",
 ]
