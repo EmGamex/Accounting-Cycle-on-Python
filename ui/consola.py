@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Instancia global de consola y funciones utilitarias de presentación y entrada."""
 from decimal import Decimal
-from typing import Optional, Sequence, Tuple
+from typing import Any, Optional, Sequence, Tuple
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
@@ -123,4 +123,3 @@ def imprimir_resumen_balance_apertura(resumen: Any) -> None:
         f"Pasivo: [bold yellow]{formatear_moneda(resumen.total_pasivo)}[/bold yellow] | "
         f"Patrimonio: [bold cyan]{formatear_moneda(resumen.total_patrimonio)}[/bold cyan]"
     )
-

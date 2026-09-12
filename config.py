@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """Configuración centralizada y constantes globales del Sistema Contable Integral."""
 from decimal import Decimal
 
@@ -22,6 +22,8 @@ MENSAJE_ALERTA_OPCION: str = "Opción no reconocida. Intente nuevamente."
 # MONEDA Y FORMATO
 # -----------------------------------------------------------------------------
 SIMBOLO_MONEDA: str = "Q"
+PRECISION_CENTAVOS: Decimal = Decimal("0.01")
+CERO_MONETARIO: Decimal = Decimal("0.00")
 
 # -----------------------------------------------------------------------------
 # NORMAS TRIBUTARIAS Y LABORALES (GUATEMALA)

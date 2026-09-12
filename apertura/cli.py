@@ -5,7 +5,12 @@ from typing import Optional, Tuple
 from apertura.catalogo import CatalogoService
 from apertura.contabilidad import MotorApertura
 from apertura.models import CuentaCatalogo, PartidaApertura, ResumenBalance
-from config import ARCHIVO_APERTURA_DEFAULT, RESPUESTAS_AFIRMATIVAS
+from config import (
+    ARCHIVO_APERTURA_DEFAULT,
+    CERO_MONETARIO,
+    PRECISION_CENTAVOS,
+    RESPUESTAS_AFIRMATIVAS,
+)
 from reportes import exportar_reporte, generar_texto_balance, imprimir_partida_rich
 from ui import (
     console,
@@ -19,6 +24,13 @@ from ui import (
     imprimir_menu_clasificacion,
     imprimir_resumen_balance_apertura,
 )
+
+# Constantes de control y límites visuales específicas de apertura
+MAX_COINCIDENCIAS_MOSTRADAS: int = 8
+COMANDO_FINALIZAR: str = "fin"
+COMANDOS_VER: tuple = ("ver", "listar")
+COMANDOS_ELIMINAR: tuple = ("eliminar", "borrar", "quitar")
+OPCIONES_CLASIFICACION_RANGO: str = "1-5"
 
 
 def pedir_confirmacion(mensaje: str, default: bool = False) -> bool:
@@ -35,10 +47,10 @@ def pedir_monto(cuenta_nombre: str) -> Decimal:
         valor = input(f"   -> Monto para '{cuenta_nombre}': Q ").replace(",", "").strip()
         try:
             monto = Decimal(valor)
-            if monto <= Decimal("0"):
+            if monto <= CERO_MONETARIO:
                 imprimir_alerta("El monto debe ser mayor a cero.")
                 continue
-            return monto.quantize(Decimal("0.01"))
+            return monto.quantize(PRECISION_CENTAVOS)
         except InvalidOperation:
             imprimir_alerta("Cantidad inválida. Ingresa un número válido (ej. 15000.50).")
 
@@ -46,7 +58,7 @@ def pedir_monto(cuenta_nombre: str) -> Decimal:
 def pedir_clasificacion_manual(nombre: str) -> str:
     """Solicita al usuario clasificar manualmente una cuenta no hallada en catálogo."""
     imprimir_menu_clasificacion(nombre)
-    return input("   Opción (1-5): ").strip()
+    return input(f"   Opción ({OPCIONES_CLASIFICACION_RANGO}): ").strip()
 
 
 def mostrar_cuentas_registradas(motor: MotorApertura) -> None:
@@ -73,7 +85,7 @@ def seleccionar_cuenta_interactiva(catalogo: CatalogoService, entrada: str) -> O
         imprimir_cuenta_seleccionada(c)
         return c
 
-    limite = min(len(coincidencias), 8)
+    limite = min(len(coincidencias), MAX_COINCIDENCIAS_MOSTRADAS)
     imprimir_coincidencias_cuentas(coincidencias, limite=limite)
 
     while True:
@@ -105,11 +117,11 @@ def resolver_cuenta(catalogo: CatalogoService, entrada: str) -> Optional[CuentaC
 def procesar_comando_especial(comando: str, motor: MotorApertura) -> bool:
     """Ejecuta comandos auxiliares de control ('ver', 'eliminar'). Retorna True si fue reconocido."""
     cmd = comando.lower()
-    if cmd in ("ver", "listar"):
+    if cmd in COMANDOS_VER:
         mostrar_cuentas_registradas(motor)
         return True
 
-    if cmd in ("eliminar", "borrar", "quitar"):
+    if cmd in COMANDOS_ELIMINAR:
         target = input("   Nombre o código de la cuenta a eliminar: ").strip()
         if motor.eliminar(target):
             imprimir_exito(f"Cuenta '{target}' eliminada.")
@@ -131,12 +143,12 @@ def mostrar_guia_comandos() -> None:
 
 def ajustar_capital_si_procede(motor: MotorApertura, catalogo: CatalogoService, resumen: ResumenBalance) -> ResumenBalance:
     """Evalúa la diferencia de capital del balance y permite asignarla automáticamente."""
-    if resumen.diferencia_capital == Decimal("0.00"):
+    if resumen.diferencia_capital == CERO_MONETARIO:
         return resumen
 
     imprimir_resumen_balance_apertura(resumen)
 
-    if resumen.diferencia_capital > Decimal("0.00"):
+    if resumen.diferencia_capital > CERO_MONETARIO:
         console.print(f"  Capital residual necesario para cuadrar: [bold yellow]{formatear_moneda(resumen.diferencia_capital)}[/bold yellow]")
         if pedir_confirmacion("¿Deseas asignar esta diferencia a la cuenta de Capital? (s/n): "):
             cta_cap = catalogo.obtener_cuenta_capital()
@@ -185,7 +197,7 @@ def iniciar_flujo_apertura(
         entrada = input("\nCuenta, código o comando (o 'fin'): ").strip()
         if not entrada:
             continue
-        if entrada.lower() == "fin":
+        if entrada.lower() == COMANDO_FINALIZAR:
             break
         if procesar_comando_especial(entrada, motor):
             continue

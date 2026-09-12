@@ -14,6 +14,7 @@ from .io_handlers import (
 from .models import PartidaContable, ResultadoPlanilla
 
 
+from config import RESPUESTAS_AFIRMATIVAS
 from ui import console, imprimir_alerta, imprimir_aviso, imprimir_banner, imprimir_exito
 
 
@@ -27,7 +28,7 @@ def flujo_interactivo() -> List[ResultadoPlanilla]:
         imprimir_boleta(resultado)
 
         continuar = input("\n¿Deseas ingresar otro empleado? (s/n): ").strip().lower()
-        if continuar not in ("s", "si", "y", "yes"):
+        if continuar not in RESPUESTAS_AFIRMATIVAS or not continuar:
             break
     return planillas
 

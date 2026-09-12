@@ -15,12 +15,10 @@ from reportes.t_graficas import (
     generar_texto_t_grafica,
     generar_texto_todas_t_graficas,
 )
+from config import MENSAJE_ALERTA_OPCION, OPCION_SALIR
 from ui import console, imprimir_alerta, imprimir_aviso, imprimir_banner, imprimir_exito
 from .engine import GestorLibroMayor, mayorizar_libro_diario
 from .exceptions import MayorError
-
-OPCION_SALIR = "0"
-MENSAJE_ALERTA_OPCION = "Opción no reconocida. Intente nuevamente."
 
 
 class AccionMenu(NamedTuple):

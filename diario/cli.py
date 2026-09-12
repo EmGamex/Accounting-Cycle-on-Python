@@ -8,12 +8,9 @@ from diario.asistentes import (
     registrar_venta_asistida,
 )
 from diario.engine import GestorLibroDiario
+from config import MENSAJE_ALERTA_OPCION, OPCION_SALIR
 from reportes import generar_texto_libro_diario, imprimir_partida_rich
 from ui import console, imprimir_alerta, imprimir_banner
-
-# Constantes de formato y presentación
-OPCION_SALIR = "0"
-MENSAJE_ALERTA_OPCION = "Opción no reconocida. Intente nuevamente."
 
 
 class AccionMenu(NamedTuple):
