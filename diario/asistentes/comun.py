@@ -6,7 +6,7 @@ from catalogo_contable import Cuenta
 from diario.engine import GestorLibroDiario
 from diario.exceptions import DescuadrePartidaError
 from diario.models import PartidaDiario
-from diario.reportes import generar_texto_partida
+from reportes import generar_texto_partida
 
 # ---------------------------------------------------------------------------
 # CONSTANTES: Cuentas contables canónicas importadas del catálogo central

@@ -9,7 +9,7 @@ from apertura.models import (
     PartidaApertura,
     ResumenBalance,
 )
-from apertura.reportes import exportar_reporte, generar_texto_balance, generar_texto_partida
+from reportes import exportar_reporte, generar_texto_balance, generar_texto_partida
 
 __all__ = [
     "CatalogoService",

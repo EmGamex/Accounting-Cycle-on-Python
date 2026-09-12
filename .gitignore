@@ -217,8 +217,13 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Test artifacts and local reports
+# Archivos de guardado de estado, reportes y pruebas locales
+prueba_apertura.txt
+prueba_*.txt
+apertura_*.txt
+apertura_contable.txt
+libro_diario.json
 temp_*
 temp_test_*
-prueba_*.txt
 *.tmp
+*.state
