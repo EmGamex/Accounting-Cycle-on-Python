@@ -71,7 +71,8 @@ def imprimir_menu_opciones(
 ) -> None:
     """Imprime una lista de opciones estilizadas numeradas con etiquetas de color."""
     for idx, (etiqueta, desc) in enumerate(opciones, start=1):
-        console.print(f"  [{COLOR_INDICE}][{idx}][/{COLOR_INDICE}] {desc}")
+        codigo = etiqueta if etiqueta else str(idx)
+        console.print(f"  [{COLOR_INDICE}][{codigo}][/{COLOR_INDICE}] {desc}")
     console.print(f"  [{COLOR_SALIR}][{salir_codigo}][/{COLOR_SALIR}] {texto_salir}")
 
 

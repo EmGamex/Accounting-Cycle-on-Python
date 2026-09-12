@@ -8,6 +8,7 @@ from apertura.models import CuentaCatalogo, PartidaApertura, ResumenBalance
 from config import (
     ARCHIVO_APERTURA_DEFAULT,
     CERO_MONETARIO,
+    MENSAJE_ALERTA_OPCION,
     PRECISION_CENTAVOS,
     RESPUESTAS_AFIRMATIVAS,
 )
@@ -31,6 +32,7 @@ COMANDO_FINALIZAR: str = "fin"
 COMANDOS_VER: tuple = ("ver", "listar")
 COMANDOS_ELIMINAR: tuple = ("eliminar", "borrar", "quitar")
 OPCIONES_CLASIFICACION_RANGO: str = "1-5"
+OPCIONES_CLASIFICACION_VALIDAS: tuple = ("1", "2", "3", "4", "5")
 
 
 def pedir_confirmacion(mensaje: str, default: bool = False) -> bool:
@@ -58,7 +60,11 @@ def pedir_monto(cuenta_nombre: str) -> Decimal:
 def pedir_clasificacion_manual(nombre: str) -> str:
     """Solicita al usuario clasificar manualmente una cuenta no hallada en catálogo."""
     imprimir_menu_clasificacion(nombre)
-    return input(f"   Opción ({OPCIONES_CLASIFICACION_RANGO}): ").strip()
+    while True:
+        opcion = input(f"   Opción ({OPCIONES_CLASIFICACION_RANGO}): ").strip()
+        if opcion in OPCIONES_CLASIFICACION_VALIDAS:
+            return opcion
+        imprimir_alerta(MENSAJE_ALERTA_OPCION)
 
 
 def mostrar_cuentas_registradas(motor: MotorApertura) -> None:

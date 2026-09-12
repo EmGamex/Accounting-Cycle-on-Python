@@ -14,8 +14,20 @@ from .io_handlers import (
 from .models import PartidaContable, ResultadoPlanilla
 
 
-from config import RESPUESTAS_AFIRMATIVAS
-from ui import console, imprimir_alerta, imprimir_aviso, imprimir_banner, imprimir_exito
+from config import (
+    ARCHIVO_PLANILLA_DEFAULT,
+    MENSAJE_ALERTA_OPCION,
+    OPCION_SALIR,
+    RESPUESTAS_AFIRMATIVAS,
+)
+from ui import (
+    console,
+    imprimir_alerta,
+    imprimir_aviso,
+    imprimir_banner,
+    imprimir_exito,
+    imprimir_menu_opciones,
+)
 
 
 def flujo_interactivo() -> List[ResultadoPlanilla]:
@@ -36,15 +48,21 @@ def flujo_interactivo() -> List[ResultadoPlanilla]:
 def menu_herramientas_csv(planillas_actuales: List[ResultadoPlanilla]) -> List[ResultadoPlanilla]:
     """Menú secundario para carga o exportación de archivos CSV (opción a futuro)."""
     imprimir_banner("HERRAMIENTAS CSV (OPCIONALES)", border_style="blue")
-    console.print("  [bold cyan][1][/bold cyan] Generar archivo 'plantilla_empleados.csv' de ejemplo")
-    console.print("  [bold cyan][2][/bold cyan] Cargar y procesar empleados desde un archivo CSV")
+    opciones = [
+        ("1", "Generar archivo 'plantilla_empleados.csv' de ejemplo"),
+        ("2", "Cargar y procesar empleados desde un archivo CSV"),
+    ]
     if planillas_actuales:
-        console.print("  [bold cyan][3][/bold cyan] Exportar planillas actuales a 'reporte_planilla.csv'")
-    console.print("  [bold dim][4][/bold dim] Volver al menú principal")
+        opciones.append(("3", f"Exportar planillas actuales a '{ARCHIVO_PLANILLA_DEFAULT}'"))
 
-    opcion = input("\nSeleccione una opción: ").strip()
+    imprimir_menu_opciones(opciones, texto_salir="Volver al menú principal", salir_codigo=OPCION_SALIR)
 
-    if opcion == "1":
+    prompt_rango = f"[1-{len(opciones)}, {OPCION_SALIR}]"
+    opcion = input(f"\nSeleccione una opción {prompt_rango}: ").strip()
+
+    if opcion in (OPCION_SALIR, "4"):
+        return planillas_actuales
+    elif opcion == "1":
         ruta = input("Nombre o ruta del archivo [plantilla_empleados.csv]: ").strip() or "plantilla_empleados.csv"
         crear_plantilla_csv_ejemplo(ruta)
         imprimir_exito(f"Plantilla generada exitosamente en: {ruta}")
@@ -67,11 +85,26 @@ def menu_herramientas_csv(planillas_actuales: List[ResultadoPlanilla]) -> List[R
         except Exception as e:
             imprimir_alerta(f"Error al procesar el archivo CSV: {e}")
     elif opcion == "3" and planillas_actuales:
-        ruta = input("Nombre de archivo de destino [reporte_planilla.csv]: ").strip() or "reporte_planilla.csv"
+        ruta = input(f"Nombre de archivo de destino [{ARCHIVO_PLANILLA_DEFAULT}]: ").strip() or ARCHIVO_PLANILLA_DEFAULT
         exportar_planilla_csv(planillas_actuales, ruta)
         imprimir_exito(f"Planilla exportada exitosamente en: {ruta}")
+    else:
+        imprimir_alerta(MENSAJE_ALERTA_OPCION)
 
     return planillas_actuales
+
+
+def _mostrar_menu_planillas(planillas_almacenadas: List[ResultadoPlanilla]) -> List[Tuple[str, str]]:
+    """Muestra el menú principal de operaciones de nóminas."""
+    console.print("\n[bold]Opciones principales:[/bold]")
+    opciones = [
+        ("1", "Ingresar empleados interactivamente (Predeterminado)"),
+        ("2", "Herramientas CSV (Carga / Plantilla / Exportación)"),
+    ]
+    if planillas_almacenadas:
+        opciones.append(("3", "Ver partida contable consolidada"))
+    imprimir_menu_opciones(opciones, texto_salir="Salir", salir_codigo=OPCION_SALIR)
+    return opciones
 
 
 def iniciar_flujo_planillas(
@@ -84,14 +117,10 @@ def iniciar_flujo_planillas(
     imprimir_banner("SISTEMA DE PLANILLAS Y PARTIDAS CONTABLES (GUATEMALA)", border_style="cyan")
 
     while True:
-        console.print("\n[bold]Opciones principales:[/bold]")
-        console.print("  [bold cyan][1][/bold cyan] Ingresar empleados interactivamente (Predeterminado)")
-        console.print("  [bold cyan][2][/bold cyan] Herramientas CSV (Carga / Plantilla / Exportación)")
-        if planillas_almacenadas:
-            console.print("  [bold cyan][3][/bold cyan] Ver partida contable consolidada")
-        console.print("  [bold dim][0][/bold dim] Salir")
+        opciones = _mostrar_menu_planillas(planillas_almacenadas)
 
-        eleccion = input("\nSeleccione opción [1]: ").strip()
+        prompt_rango = f"[1-{len(opciones)}, {OPCION_SALIR}]"
+        eleccion = input(f"\nSeleccione opción {prompt_rango} [1]: ").strip()
 
         if eleccion in ("1", ""):
             nuevas = flujo_interactivo()
@@ -108,11 +137,11 @@ def iniciar_flujo_planillas(
         elif eleccion == "3" and planillas_almacenadas:
             ultima_partida = generar_partida_contable(planillas_almacenadas)
             imprimir_partida(ultima_partida)
-        elif eleccion == "0":
+        elif eleccion == OPCION_SALIR:
             console.print("\n¡Hasta pronto!")
             break
         else:
-            imprimir_alerta("Opción no válida. Intente nuevamente.")
+            imprimir_alerta(MENSAJE_ALERTA_OPCION)
 
     if planillas_almacenadas and ultima_partida is None:
         ultima_partida = generar_partida_contable(planillas_almacenadas)

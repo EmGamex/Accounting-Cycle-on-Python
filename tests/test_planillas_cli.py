@@ -26,7 +26,15 @@ class TestPlanillasCLI(unittest.TestCase):
         """Verifica que una opción inválida muestre advertencia y continúe."""
         iniciar_flujo_planillas()
         salida = mock_stdout.getvalue()
-        self.assertIn("Opción no válida. Intente nuevamente.", salida)
+        self.assertIn("Opción no reconocida. Intente nuevamente.", salida)
+
+    @patch("sys.stdout", new_callable=io.StringIO)
+    @patch("builtins.input", side_effect=["99"])
+    def test_menu_csv_opcion_invalida(self, mock_input, mock_stdout):
+        """Verifica que una opción inválida en herramientas CSV muestre alerta."""
+        menu_herramientas_csv([])
+        salida = mock_stdout.getvalue()
+        self.assertIn("Opción no reconocida. Intente nuevamente.", salida)
 
     @patch("sys.stdout", new_callable=io.StringIO)
     @patch("builtins.input", side_effect=["n"])
