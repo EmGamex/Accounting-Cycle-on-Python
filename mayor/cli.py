@@ -1,24 +1,18 @@
 """Capa de presentación y menú interactivo por consola para el Libro Mayor y T-Gráficas."""
 from typing import Any, Callable, NamedTuple, Optional
 
-from rich import box
-from rich.table import Table
-
-from diario.engine import GestorLibroDiario
-from reportes.formato import formato_moneda, linea_doble, linea_simple
-from reportes.libro_mayor import (
-    exportar_reporte_libro_mayor,
-    generar_texto_libro_mayor_formal,
-)
-from reportes.t_graficas import (
-    exportar_reporte_t_graficas,
-    generar_texto_t_grafica,
-    generar_texto_todas_t_graficas,
-)
 from config import MENSAJE_ALERTA_OPCION, OPCION_SALIR
+from diario.engine import GestorLibroDiario
+from reportes.libro_mayor import exportar_reporte_libro_mayor
+from reportes.t_graficas import exportar_reporte_t_graficas
 from ui import (
+    BADGE_CUADRADO,
+    BADGE_DESCUADRADO,
     console,
     formatear_moneda,
+    generar_tabla_mayor_formal,
+    generar_tabla_sumas_y_saldos,
+    generar_tabla_t_grafica,
     imprimir_alerta,
     imprimir_aviso,
     imprimir_banner,
@@ -45,25 +39,33 @@ def _imprimir_resumen_mayor(gestor_mayor: GestorLibroMayor) -> None:
     """Muestra un resumen conciso del estado actual del mayor."""
     mayor = gestor_mayor.sincronizar()
     num_ctas = len(mayor.cuentas)
-    estado = "CUADRADO" if mayor.cuadra or num_ctas == 0 else "DESCUADRADO"
-    color = "green" if mayor.cuadra or num_ctas == 0 else "red"
+    badge = BADGE_CUADRADO if (mayor.cuadra or num_ctas == 0) else BADGE_DESCUADRADO
     debe_fmt = formatear_moneda(mayor.total_debe)
     haber_fmt = formatear_moneda(mayor.total_haber)
     console.print(
         f"\n[bold]Libro Mayor Actual:[/bold] [cyan]{num_ctas}[/cyan] cuenta(s) activa(s) | "
         f"Debe: [green]{debe_fmt}[/green] | Haber: [green]{haber_fmt}[/green] "
-        f"[[bold {color}]{estado}[/bold {color}]]"
+        f"{badge}"
     )
 
 
 def _ver_todas_t_graficas(gestor_mayor: GestorLibroMayor) -> None:
-    """Muestra todas las T-gráficas generadas en consola."""
+    """Muestra todas las T-gráficas generadas en consola usando tablas Rich."""
     mayor = gestor_mayor.sincronizar()
-    console.print("\n" + generar_texto_todas_t_graficas(mayor))
+    imprimir_banner("LIBRO MAYOR - REPORTE DE T-GRÁFICAS", border_style="cyan")
+    if not mayor.cuentas:
+        imprimir_aviso("No hay movimientos registrados en el Libro Mayor.")
+        return
+    for c in mayor.cuentas_ordenadas:
+        tabla = generar_tabla_t_grafica(c)
+        console.print(tabla)
+        console.print("")
+    tabla_resumen = generar_tabla_sumas_y_saldos(mayor)
+    console.print(tabla_resumen)
 
 
 def _consultar_t_grafica_individual(gestor_mayor: GestorLibroMayor) -> None:
-    """Solicita código o nombre de cuenta y muestra su T-gráfica."""
+    """Solicita código o nombre de cuenta y muestra su T-gráfica estilizada con Rich."""
     mayor = gestor_mayor.sincronizar()
     if not mayor.cuentas:
         imprimir_alerta("El Libro Mayor no tiene cuentas registradas.")
@@ -89,28 +91,33 @@ def _consultar_t_grafica_individual(gestor_mayor: GestorLibroMayor) -> None:
             imprimir_alerta("Selección cancelada.")
             return
 
-    console.print("\n" + linea_simple(55))
-    console.print(generar_texto_t_grafica(cuenta))
-    console.print(linea_simple(55))
+    console.print("")
+    console.print(generar_tabla_t_grafica(cuenta))
 
 
 def _ver_mayor_formal(gestor_mayor: GestorLibroMayor) -> None:
-    """Muestra el reporte del Libro Mayor a 3 columnas en consola."""
+    """Muestra el reporte del Libro Mayor formal a 3 columnas en consola usando tablas Rich."""
     mayor = gestor_mayor.sincronizar()
-    console.print("\n" + generar_texto_libro_mayor_formal(mayor))
+    imprimir_banner("LIBRO MAYOR DE OPERACIONES (A 3 COLUMNAS)", border_style="cyan")
+    if not mayor.cuentas:
+        imprimir_aviso("No hay movimientos registrados en el Libro Mayor.")
+        return
+    for folio, c in enumerate(mayor.cuentas_ordenadas, start=1):
+        tabla = generar_tabla_mayor_formal(c, folio=folio)
+        console.print(tabla)
+        console.print("")
+    tabla_resumen = generar_tabla_sumas_y_saldos(mayor)
+    console.print(tabla_resumen)
 
 
 def _ver_resumen_sumas_y_saldos(gestor_mayor: GestorLibroMayor) -> None:
     """Imprime una tabla compacta con las sumas y saldos de cada cuenta."""
-    from ui.tablas import generar_tabla_sumas_y_saldos
-
     mayor = gestor_mayor.sincronizar()
     tabla = generar_tabla_sumas_y_saldos(mayor)
     console.print(tabla)
 
-    cuadre_msg = "CUADRE EXACTO" if mayor.cuadra else "DESCUADRADO"
-    color = "green" if mayor.cuadra else "red"
-    console.print(f"Estado: [[bold {color}]{cuadre_msg}[/bold {color}]]")
+    badge = BADGE_CUADRADO if mayor.cuadra else BADGE_DESCUADRADO
+    console.print(f"Estado: {badge}")
 
 
 def _exportar_t_graficas_txt(gestor_mayor: GestorLibroMayor) -> None:

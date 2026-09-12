@@ -8,6 +8,7 @@ from config import FORMATO_FECHA, SIMBOLO_MONEDA
 from ui.consola import console, formatear_moneda, imprimir_alerta, imprimir_exito
 from ui.temas import (
     BORDE_TABLA,
+    BORDE_T_GRAFICA,
     COLOR_ATENUADO,
     COLOR_EXITO,
     COLOR_PRIMARIO,
@@ -101,6 +102,79 @@ def generar_tabla_sumas_y_saldos(mayor: Any) -> Table:
     tabla.columns[3].footer = tot_h
     tabla.columns[4].footer = tot_sd
     tabla.columns[5].footer = tot_sa
+
+    return tabla
+
+
+def generar_tabla_t_grafica(cuenta: Any) -> Table:
+    """Genera una tabla Rich estilizada que representa una T-Gráfica contable individual."""
+    from itertools import zip_longest
+    from mayor.models import NaturalezaSaldo
+
+    titulo = f"[{cuenta.codigo}] {cuenta.nombre}"
+    cargos = getattr(cuenta, "cargos", [])
+    abonos = getattr(cuenta, "abonos", [])
+
+    tabla = Table(title=titulo, box=BORDE_T_GRAFICA, show_edge=False, show_footer=True)
+    tabla.add_column("DEBE (Cargos)", justify="right", style="green", footer_style="bold green")
+    tabla.add_column("HABER (Abonos)", justify="right", style="green", footer_style="bold green")
+
+    if not cargos and not abonos:
+        tabla.add_row("[dim]Sin movimientos[/dim]", "[dim]Sin movimientos[/dim]")
+    else:
+        for c, a in zip_longest(cargos, abonos):
+            col_c = f"Pda #{c.numero_partida}   {formatear_moneda(c.debe)}" if c is not None else ""
+            col_a = f"Pda #{a.numero_partida}   {formatear_moneda(a.haber)}" if a is not None else ""
+            tabla.add_row(col_c, col_a)
+
+    tabla.columns[0].footer = f"SUMA: {formatear_moneda(cuenta.total_debe)}"
+    tabla.columns[1].footer = f"SUMA: {formatear_moneda(cuenta.total_haber)}"
+
+    tipo = getattr(cuenta, "tipo_saldo", NaturalezaSaldo.SALDADA)
+    if tipo == NaturalezaSaldo.SALDADA:
+        txt_saldo = f"SALDO: {formatear_moneda(cuenta.saldo)} (CUENTA SALDADA)"
+    elif tipo == NaturalezaSaldo.DEUDOR:
+        txt_saldo = f"SALDO DEUDOR: {formatear_moneda(cuenta.saldo)}"
+    else:
+        txt_saldo = f"SALDO ACREEDOR: {formatear_moneda(cuenta.saldo)}"
+
+    if getattr(cuenta, "es_saldo_anomalo", False):
+        nat_esperada = getattr(cuenta.naturaleza_esperada, "value", str(cuenta.naturaleza_esperada))
+        txt_saldo += f" [bold yellow][ALERTA: Saldo contrario a naturaleza {nat_esperada}][/bold yellow]"
+
+    tabla.caption = txt_saldo
+    return tabla
+
+
+def generar_tabla_mayor_formal(cuenta: Any, folio: int = 1) -> Table:
+    """Genera una tabla Rich estilizada a 3 columnas para una cuenta del Libro Mayor."""
+    titulo = f"CUENTA: [{cuenta.codigo}] {cuenta.nombre} | FOLIO: {folio:02d}"
+    tabla = Table(title=titulo, box=BORDE_TABLA, show_footer=True)
+    tabla.add_column("Fecha", style="dim", no_wrap=True)
+    tabla.add_column("Pda", justify="center", no_wrap=True)
+    tabla.add_column("Concepto / Glosa", style=COLOR_TEXTO)
+    tabla.add_column("Debe", justify="right", style="green", footer_style="bold green", no_wrap=True)
+    tabla.add_column("Haber", justify="right", style="green", footer_style="bold green", no_wrap=True)
+    tabla.add_column("Saldo", justify="right", style="bold green", footer_style="bold green", no_wrap=True)
+
+    movimientos = cuenta.calcular_movimientos_con_saldo() if hasattr(cuenta, "calcular_movimientos_con_saldo") else []
+    if not movimientos:
+        tabla.add_row("", "", "[dim]Sin movimientos registrados[/dim]", "", "", "")
+    else:
+        for m in movimientos:
+            fecha_str = m.fecha.strftime(FORMATO_FECHA) if hasattr(m.fecha, "strftime") else str(m.fecha)
+            pda_str = str(m.numero_partida)
+            concepto = m.concepto
+            debe_str = formatear_moneda(m.debe) if m.debe > Decimal("0.00") else ""
+            haber_str = formatear_moneda(m.haber) if m.haber > Decimal("0.00") else ""
+            saldo_str = formatear_moneda(m.saldo_acumulado)
+            tabla.add_row(fecha_str, pda_str, concepto, debe_str, haber_str, saldo_str)
+
+    tipo_saldo_nombre = getattr(cuenta.tipo_saldo, "value", str(cuenta.tipo_saldo)).capitalize()
+    tabla.columns[2].footer = f"SUMAS Y SALDO FINAL [{tipo_saldo_nombre}]:"
+    tabla.columns[3].footer = formatear_moneda(cuenta.total_debe)
+    tabla.columns[4].footer = formatear_moneda(cuenta.total_haber)
+    tabla.columns[5].footer = formatear_moneda(cuenta.saldo)
 
     return tabla
 

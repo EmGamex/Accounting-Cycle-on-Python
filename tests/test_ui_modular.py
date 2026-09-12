@@ -20,8 +20,11 @@ class TestUIModular(unittest.TestCase):
         self.assertIsNotNone(ui.console)
         self.assertTrue(callable(ui.imprimir_banner))
         self.assertTrue(callable(ui.generar_tabla_partida))
+        self.assertTrue(callable(ui.generar_tabla_t_grafica))
+        self.assertTrue(callable(ui.generar_tabla_mayor_formal))
         self.assertTrue(callable(ui.generar_arbol_catalogo))
         self.assertTrue(callable(ui.obtener_ancho_consola))
+        self.assertIsNotNone(ui.BORDE_T_GRAFICA)
 
     def test_formatear_moneda(self):
         self.assertEqual(ui.formatear_moneda(Decimal("1250.50")), "Q1,250.50")
@@ -54,6 +57,26 @@ class TestUIModular(unittest.TestCase):
         tabla = ui.generar_tabla_sumas_y_saldos(mayor)
         self.assertIn("SUMAS Y SALDOS", tabla.title)
         self.assertEqual(len(tabla.columns), 6)
+
+    def test_generar_tabla_t_grafica_y_mayor_formal(self):
+        diario = LibroDiario()
+        pda = PartidaDiario(numero=1, fecha=date(2026, 1, 1), glosa="Apertura")
+        pda.agregar_cargo("1101", "Caja General", Decimal("1000.00"))
+        pda.agregar_abono("3101", "Capital", Decimal("1000.00"))
+        diario.partidas.append(pda)
+
+        gestor = GestorLibroMayor(diario)
+        mayor = gestor.sincronizar()
+        cuenta_caja = mayor.obtener_cuenta("1101")
+
+        tabla_tg = ui.generar_tabla_t_grafica(cuenta_caja)
+        self.assertIn("[1101] Caja General", tabla_tg.title)
+        self.assertEqual(len(tabla_tg.columns), 2)
+        self.assertIn("SALDO DEUDOR", tabla_tg.caption)
+
+        tabla_formal = ui.generar_tabla_mayor_formal(cuenta_caja, folio=1)
+        self.assertIn("CUENTA: [1101] Caja General", tabla_formal.title)
+        self.assertEqual(len(tabla_formal.columns), 6)
 
     def test_generar_arbol_catalogo(self):
         arbol = ui.generar_arbol_catalogo(filtro_clase="Activo")
