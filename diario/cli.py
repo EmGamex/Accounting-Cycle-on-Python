@@ -13,16 +13,13 @@ from reportes import generar_texto_libro_diario
 # Constantes de formato y presentación
 ANCHO_BANNER = 70
 OPCION_SALIR = "0"
-OPCION_PRIMERA = "1"
-OPCION_ULTIMA = "5"
 MENSAJE_ALERTA_OPCION = "  (!) Opción no reconocida. Intente nuevamente."
 
 
-class OpcionMenu(NamedTuple):
-    """Estructura de datos para representar una opción en el menú interactivo."""
-    codigo: str
+class AccionMenu(NamedTuple):
+    """Estructura para representar una opción ejecutable en el menú interactivo."""
     descripcion: str
-    accion: Optional[Callable[[GestorLibroDiario], Any]] = None
+    accion: Callable[[GestorLibroDiario], Any]
 
 
 def _imprimir_encabezado() -> None:
@@ -42,48 +39,38 @@ def _imprimir_resumen_libro(gestor: GestorLibroDiario) -> None:
     )
 
 
-def _obtener_catalogo_opciones() -> dict[str, OpcionMenu]:
-    """Define las opciones disponibles en el menú interactivo."""
-    opciones = [
-        OpcionMenu(
-            "1",
+def _obtener_acciones_diario() -> list[AccionMenu]:
+    """Define la lista ordenada de operaciones disponibles en el menú."""
+    return [
+        AccionMenu(
             "Registrar Compra / Gasto con IVA (Crédito Fiscal 12%)",
             registrar_compra_asistida,
         ),
-        OpcionMenu(
-            "2",
+        AccionMenu(
             "Registrar Venta con IVA (Débito Fiscal 12%)",
             registrar_venta_asistida,
         ),
-        OpcionMenu(
-            "3",
+        AccionMenu(
             "Registrar Operación Simple (Traslado, Cobro a Clientes, Pago a Proveedores)",
             registrar_operacion_simple_asistida,
         ),
-        OpcionMenu(
-            "4",
+        AccionMenu(
             "Registrar Partida Libre / Asiento General (Línea por línea)",
             registrar_partida_libre_asistida,
         ),
-        OpcionMenu(
-            "5",
+        AccionMenu(
             "Ver Libro Diario Completo",
             lambda g: print("\n" + generar_texto_libro_diario(g.libro)),
         ),
-        OpcionMenu(
-            OPCION_SALIR,
-            "Volver / Salir",
-            None,
-        ),
     ]
-    return {op.codigo: op for op in opciones}
 
 
-def _mostrar_menu(opciones: dict[str, OpcionMenu]) -> None:
-    """Imprime las opciones disponibles del menú en consola."""
+def _mostrar_menu(acciones: list[AccionMenu]) -> None:
+    """Imprime las opciones disponibles del menú basándose en su posición."""
     print("Operaciones diarias disponibles:")
-    for op in opciones.values():
-        print(f"  [{op.codigo}] {op.descripcion}")
+    for idx, item in enumerate(acciones, start=1):
+        print(f"  [{idx}] {item.descripcion}")
+    print(f"  [{OPCION_SALIR}] Volver / Salir")
 
 
 def iniciar_flujo_diario(gestor: Optional[GestorLibroDiario] = None) -> None:
@@ -92,21 +79,20 @@ def iniciar_flujo_diario(gestor: Optional[GestorLibroDiario] = None) -> None:
         gestor = GestorLibroDiario(estricto_cronologico=False)
 
     _imprimir_encabezado()
-    opciones = _obtener_catalogo_opciones()
+    acciones = _obtener_acciones_diario()
 
     while True:
         _imprimir_resumen_libro(gestor)
-        _mostrar_menu(opciones)
+        _mostrar_menu(acciones)
 
-        prompt_rango = f"[{OPCION_PRIMERA}-{OPCION_ULTIMA}, {OPCION_SALIR}]"
+        prompt_rango = f"[1-{len(acciones)}, {OPCION_SALIR}]"
         seleccion = input(f"\nSeleccione una opción {prompt_rango}: ").strip()
 
         if seleccion == OPCION_SALIR:
             print("\n¡Gracias por utilizar el Sistema de Libro Diario!")
             break
 
-        opcion = opciones.get(seleccion)
-        if opcion and opcion.accion:
-            opcion.accion(gestor)
+        if seleccion.isdigit() and 1 <= int(seleccion) <= len(acciones):
+            acciones[int(seleccion) - 1].accion(gestor)
         else:
             print(MENSAJE_ALERTA_OPCION)
