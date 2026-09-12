@@ -1,6 +1,6 @@
 """Módulo orquestador y controlador interactivo del ciclo contable integral (Guatemala)."""
 import os
-from typing import Callable, Optional
+from typing import Any, Callable, NamedTuple, Optional
 
 from apertura.cli import iniciar_flujo_apertura
 from planilla.cli import iniciar_flujo_planillas
@@ -8,25 +8,26 @@ from diario.cli import iniciar_flujo_diario
 from diario.conectores import de_partida_apertura, de_partida_planilla
 from diario.engine import GestorLibroDiario
 
-# Constantes de configuración y persistencia
+# Constantes de configuración y presentación
 ARCHIVO_EJERCICIO_DEFAULT = "libro_diario.json"
 ANCHO_ENCABEZADO = 72
 ANCHO_SUBMENU = 55
 RESPUESTAS_AFIRMATIVAS = ("s", "si", "y", "yes", "")
-
-# Opciones del menú principal
-OPCION_APERTURA = "1"
-OPCION_PLANILLAS = "2"
-OPCION_DIARIO = "3"
-OPCION_PERSISTENCIA = "4"
 OPCION_SALIR = "0"
+MENSAJE_ALERTA_OPCION = "  (!) Opción no reconocida. Intente nuevamente."
 
-# Opciones del submenú de persistencia
-OPCION_PERSISTENCIA_GUARDAR_DEFAULT = "1"
-OPCION_PERSISTENCIA_GUARDAR_CUSTOM = "2"
-OPCION_PERSISTENCIA_CARGAR_DEFAULT = "3"
-OPCION_PERSISTENCIA_CARGAR_CUSTOM = "4"
-OPCION_PERSISTENCIA_VOLVER = "0"
+
+class AccionMenu(NamedTuple):
+    """Estructura para representar una opción ejecutable en un menú."""
+    descripcion: str
+    accion: Callable[[], Any]
+
+
+def _mostrar_opciones_con_indices(acciones: list[AccionMenu], texto_salir: str = "Volver / Salir") -> None:
+    """Imprime una lista de acciones numeradas secuencialmente y la opción de salida."""
+    for idx, item in enumerate(acciones, start=1):
+        print(f"  [{idx}] {item.descripcion}")
+    print(f"  [{OPCION_SALIR}] {texto_salir}")
 
 
 # ==============================================================================
@@ -82,32 +83,42 @@ def _cargar_personalizado(gestor: GestorLibroDiario) -> None:
 # SUBMENÚ DE PERSISTENCIA
 # ==============================================================================
 
+def _obtener_acciones_persistencia(gestor: GestorLibroDiario) -> list[AccionMenu]:
+    """Retorna las acciones disponibles para el submenú de persistencia JSON."""
+    return [
+        AccionMenu(
+            f"Guardar ejercicio actual en '{ARCHIVO_EJERCICIO_DEFAULT}'",
+            lambda: _guardar_ejercicio(gestor, ARCHIVO_EJERCICIO_DEFAULT),
+        ),
+        AccionMenu(
+            "Guardar ejercicio en una ruta personalizada",
+            lambda: _guardar_personalizado(gestor),
+        ),
+        AccionMenu(
+            f"Cargar ejercicio desde '{ARCHIVO_EJERCICIO_DEFAULT}'",
+            lambda: _cargar_ejercicio(gestor, ARCHIVO_EJERCICIO_DEFAULT),
+        ),
+        AccionMenu(
+            "Cargar ejercicio desde una ruta personalizada",
+            lambda: _cargar_personalizado(gestor),
+        ),
+    ]
+
+
 def menu_persistencia(gestor: GestorLibroDiario) -> None:
     """Submenú para guardar o cargar el ejercicio contable en formato JSON."""
     print("\n" + "-" * ANCHO_SUBMENU)
     print("      GESTIÓN Y PERSISTENCIA DEL EJERCICIO (JSON)")
     print("-" * ANCHO_SUBMENU)
-    print(f"  [{OPCION_PERSISTENCIA_GUARDAR_DEFAULT}] Guardar ejercicio actual en '{ARCHIVO_EJERCICIO_DEFAULT}'")
-    print(f"  [{OPCION_PERSISTENCIA_GUARDAR_CUSTOM}] Guardar ejercicio en una ruta personalizada")
-    print(f"  [{OPCION_PERSISTENCIA_CARGAR_DEFAULT}] Cargar ejercicio desde '{ARCHIVO_EJERCICIO_DEFAULT}'")
-    print(f"  [{OPCION_PERSISTENCIA_CARGAR_CUSTOM}] Cargar ejercicio desde una ruta personalizada")
-    print(f"  [{OPCION_PERSISTENCIA_VOLVER}] Volver al menú principal")
 
-    op = input(
-        f"\nSeleccione una opción [{OPCION_PERSISTENCIA_GUARDAR_DEFAULT}-{OPCION_PERSISTENCIA_CARGAR_CUSTOM}, "
-        f"{OPCION_PERSISTENCIA_VOLVER}]: "
-    ).strip()
+    acciones = _obtener_acciones_persistencia(gestor)
+    _mostrar_opciones_con_indices(acciones, texto_salir="Volver al menú principal")
 
-    acciones: dict[str, Callable[[], None]] = {
-        OPCION_PERSISTENCIA_GUARDAR_DEFAULT: lambda: _guardar_ejercicio(gestor, ARCHIVO_EJERCICIO_DEFAULT),
-        OPCION_PERSISTENCIA_GUARDAR_CUSTOM: lambda: _guardar_personalizado(gestor),
-        OPCION_PERSISTENCIA_CARGAR_DEFAULT: lambda: _cargar_ejercicio(gestor, ARCHIVO_EJERCICIO_DEFAULT),
-        OPCION_PERSISTENCIA_CARGAR_CUSTOM: lambda: _cargar_personalizado(gestor),
-    }
+    prompt_rango = f"[1-{len(acciones)}, {OPCION_SALIR}]"
+    op = input(f"\nSeleccione una opción {prompt_rango}: ").strip()
 
-    accion = acciones.get(op)
-    if accion:
-        accion()
+    if op.isdigit() and 1 <= int(op) <= len(acciones):
+        acciones[int(op) - 1].accion()
 
 
 _menu_persistencia_core = menu_persistencia
@@ -146,6 +157,46 @@ def _accion_salir(gestor: GestorLibroDiario) -> None:
     print("\n¡Gracias por utilizar el Sistema Contable Integral! Hasta pronto.")
 
 
+def _imprimir_banner_principal() -> None:
+    """Imprime el banner del menú principal del sistema."""
+    separador = "=" * ANCHO_ENCABEZADO
+    print(separador)
+    print("             SISTEMA CONTABLE INTEGRAL (GUATEMALA)")
+    print(separador)
+
+
+def _imprimir_estado_ejercicio(gestor: GestorLibroDiario) -> None:
+    """Muestra el balance y cuadre actual del libro diario."""
+    total_d, total_h = gestor.totales()
+    cuadra_str = "CUADRADO" if gestor.libro.cuadra or not gestor.libro.partidas else "DESCUADRADO"
+    print(
+        f"\nEstado del Ejercicio: {len(gestor.libro.partidas)} partida(s) en Diario | "
+        f"Debe: Q{total_d:,.2f} | Haber: Q{total_h:,.2f} [{cuadra_str}]"
+    )
+
+
+def _obtener_acciones_principales(gestor: GestorLibroDiario) -> list[AccionMenu]:
+    """Retorna los módulos principales disponibles en el orquestador."""
+    return [
+        AccionMenu(
+            "Sistema de Apertura Contable (Inventario y Balance Inicial)",
+            lambda: _accion_apertura(gestor),
+        ),
+        AccionMenu(
+            "Sistema de Planillas y Nóminas (Cálculo de Sueldos y Boletas)",
+            lambda: _accion_planillas(gestor),
+        ),
+        AccionMenu(
+            "Sistema de Libro Diario (Registro de Operaciones Diarias)",
+            lambda: iniciar_flujo_diario(gestor=gestor),
+        ),
+        AccionMenu(
+            "Guardar / Cargar Ejercicio Contable (Persistencia JSON)",
+            lambda: menu_persistencia(gestor),
+        ),
+    ]
+
+
 # ==============================================================================
 # ORQUESTADOR PRINCIPAL
 # ==============================================================================
@@ -160,41 +211,26 @@ def menu_principal(gestor: Optional[GestorLibroDiario] = None) -> None:
             except Exception:
                 pass
 
-    print("=" * ANCHO_ENCABEZADO)
-    print("             SISTEMA CONTABLE INTEGRAL (GUATEMALA)")
-    print("=" * ANCHO_ENCABEZADO)
-
-    acciones: dict[str, Callable[[], None]] = {
-        OPCION_APERTURA: lambda: _accion_apertura(gestor),
-        OPCION_PLANILLAS: lambda: _accion_planillas(gestor),
-        OPCION_DIARIO: lambda: iniciar_flujo_diario(gestor=gestor),
-        OPCION_PERSISTENCIA: lambda: menu_persistencia(gestor),
-    }
+    _imprimir_banner_principal()
 
     while True:
-        total_d, total_h = gestor.totales()
-        cuadra_str = "CUADRADO" if gestor.libro.cuadra or not gestor.libro.partidas else "DESCUADRADO"
-        print(f"\nEstado del Ejercicio: {len(gestor.libro.partidas)} partida(s) en Diario | "
-              f"Debe: Q{total_d:,.2f} | Haber: Q{total_h:,.2f} [{cuadra_str}]")
+        _imprimir_estado_ejercicio(gestor)
+        acciones = _obtener_acciones_principales(gestor)
 
         print("\nMódulos principales disponibles:")
-        print(f"  [{OPCION_APERTURA}] Sistema de Apertura Contable (Inventario y Balance Inicial)")
-        print(f"  [{OPCION_PLANILLAS}] Sistema de Planillas y Nóminas (Cálculo de Sueldos y Boletas)")
-        print(f"  [{OPCION_DIARIO}] Sistema de Libro Diario (Registro de Operaciones Diarias)")
-        print(f"  [{OPCION_PERSISTENCIA}] Guardar / Cargar Ejercicio Contable (Persistencia JSON)")
-        print(f"  [{OPCION_SALIR}] Salir")
+        _mostrar_opciones_con_indices(acciones, texto_salir="Salir")
 
-        opcion = input(f"\nSeleccione una opción [{OPCION_APERTURA}-{OPCION_PERSISTENCIA}, {OPCION_SALIR}]: ").strip()
+        prompt_rango = f"[1-{len(acciones)}, {OPCION_SALIR}]"
+        opcion = input(f"\nSeleccione una opción {prompt_rango}: ").strip()
 
         if opcion == OPCION_SALIR:
             _accion_salir(gestor)
             break
 
-        accion = acciones.get(opcion)
-        if accion:
+        if opcion.isdigit() and 1 <= int(opcion) <= len(acciones):
             try:
-                accion()
+                acciones[int(opcion) - 1].accion()
             except KeyboardInterrupt:
                 print("\n  [!] Retornando al menú principal...")
         else:
-            print("  (!) Opción no reconocida. Intente nuevamente.")
+            print(MENSAJE_ALERTA_OPCION)
