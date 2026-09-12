@@ -46,7 +46,6 @@ def calcular_boleta(
     comisiones = money(datos.ventas * (datos.pct_comision / Decimal("100.00")))
 
     jornada = datos.jornada_horas if datos.jornada_horas > Decimal("0") else Decimal("8.0")
-    # Fórmula legal hora extra: (Sueldo Ordinario / 30 / Jornada Diaria) * 1.5
     valor_hora_extra = (sueldo_base / DIAS_MES_COMERCIAL / jornada) * RECARGO_HORA_EXTRA
     sueldo_extraordinario = money(datos.horas_extras * valor_hora_extra)
 
