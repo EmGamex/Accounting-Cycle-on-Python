@@ -2,6 +2,7 @@
 from decimal import Decimal
 import os
 import unittest
+from unittest.mock import patch
 
 from apertura import (
     CatalogoService,
@@ -51,6 +52,20 @@ class TestAperturaContable(unittest.TestCase):
         cta_vehiculo = self.catalogo.buscar("vehiculo")
         self.assertIsNotNone(cta_vehiculo)
         self.assertEqual(cta_vehiculo.nombre, "Vehículos")
+
+    def test_buscar_coincidencias_multiples(self):
+        """Verifica que buscar_coincidencias retorne todas las cuentas relevantes para selección interactiva."""
+        coincidencias = self.catalogo.buscar_coincidencias("depreciacion")
+        self.assertGreater(len(coincidencias), 1)
+        # Verificar que incluya subcuentas específicas
+        codigos = [c.codigo for c in coincidencias]
+        self.assertIn("1205", codigos)
+        self.assertIn("1205-01", codigos)
+
+        # Búsqueda por código exacto debe retornar 1 sola
+        exacta = self.catalogo.buscar_coincidencias("1101")
+        self.assertEqual(len(exacta), 1)
+        self.assertEqual(exacta[0].nombre, "Caja General")
 
     def test_acumulacion_y_eliminacion_de_cuentas(self):
         """Verifica que montos sobre la misma cuenta se acumulen y se puedan eliminar."""
@@ -141,6 +156,24 @@ class TestAperturaContable(unittest.TestCase):
             if os.path.exists(ruta_test):
                 os.remove(ruta_test)
 
+    @patch("builtins.input", side_effect=[
+        "1101",
+        "8000.00",
+        "fin",
+        "s",  # Cuadrar con capital
+        "n",  # No exportar a txt
+    ])
+    def test_iniciar_flujo_apertura_retorno(self, mock_input):
+        """Verifica que iniciar_flujo_apertura retorne correctamente resumen y partida."""
+        from apertura.cli import iniciar_flujo_apertura
+        resumen, partida = iniciar_flujo_apertura(numero_partida=3, exportar_archivo=True)
+        self.assertIsNotNone(resumen)
+        self.assertIsNotNone(partida)
+        self.assertEqual(partida.numero, 3)
+        self.assertTrue(partida.cuadra)
+        self.assertEqual(partida.total_debe, Decimal("8000.00"))
+
 
 if __name__ == "__main__":
     unittest.main()
+

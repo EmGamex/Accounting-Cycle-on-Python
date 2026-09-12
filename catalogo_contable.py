@@ -1,117 +1,228 @@
-﻿"""Catálogo Contable Central y Motor de Navegación Jerárquica.
+"""Catálogo Contable Central y Motor de Navegación Jerárquica.
 
 Proporciona la estructura contable formal, nomenclatura compatible con NIIF para PYMES
 y legislación guatemalteca (SAT / IGSS / Código de Trabajo), así como funciones de navegación.
 """
+from enum import StrEnum
 from typing import Dict, List, Optional, Tuple
+
+
+class Cuenta(StrEnum):
+    """Identificadores canónicos de cuentas contables estándar del sistema."""
+    # 1.1 Activo Corriente
+    CAJA = "1101"
+    BANCOS = "1102"
+    CLIENTES = "1103"
+    ESTIMACION_INCOBRABLES = "1103-R"
+    MERCADERIAS = "1104"
+    MATERIAL_EMPAQUE = "1105"
+    MONEDA_EXTRANJERA = "1106"
+    IVA_CREDITO = "1107"
+    COMBUSTIBLES = "1108"
+    CAJA_CHICA = "1109"
+    ANTICIPOS_PROVEEDORES = "1110"
+    ANTICIPOS_SUELDOS = "1111"
+    ALQUILERES_ANTICIPADOS = "1112"
+    SEGUROS_ANTICIPADOS = "1113"
+
+    # 1.2 Activo No Corriente
+    TERRENOS = "1201"
+    EDIFICIOS = "1202"
+    MAQUINARIA = "1203"
+    MOBILIARIO = "1204"
+    DEPREC_ACUMULADA = "1205"
+    DEPREC_ACUM_EDIFICIOS = "1205-01"
+    DEPREC_ACUM_MAQUINARIA = "1205-02"
+    DEPREC_ACUM_MOBILIARIO = "1205-03"
+    DEPREC_ACUM_VEHICULOS = "1205-04"
+    VEHICULOS = "1206"
+    DOCS_COBRAR_LP = "1207"
+    HERRAMIENTAS = "1208"
+    MARCAS_PATENTES = "1209"
+    AMORT_ACUMULADA = "1210"
+
+    # 2.1 Pasivo Corriente
+    PROVEEDORES = "2101"
+    CUENTAS_POR_PAGAR_CP = "2102"
+    IMPUESTOS_POR_PAGAR = "2103"
+    SUELDOS_RETENIDOS = "2104"
+    IGSS_POR_PAGAR = "2104-01"
+    RETENCION_ISR_SUELDOS = "2104-02"
+    RETENCION_ISR_COMPRAS = "2104-03"
+    SUELDOS_POR_PAGAR = "2104-04"
+    OTRAS_RETENCIONES = "2104-05"
+    IVA_DEBITO = "2105"
+    ACREEDORES = "2106"
+    INTERESES_POR_PAGAR = "2107"
+    PROVISIONES_LABORALES = "2108"
+
+    # 2.2 Pasivo No Corriente
+    ACREEDORES_HIPOTECARIOS = "2201"
+    PRESTAMOS_BANCARIOS = "2202"
+    DOCS_POR_PAGAR_LP = "2203"
+    HIPOTECAS = "2204"
+    RESERVA_INDEMNIZACIONES = "2205"
+
+    # 3. Capital / Patrimonio
+    CAPITAL_SOCIAL = "3101"
+    RESERVA_LEGAL = "3102"
+    UTILIDADES_ACUMULADAS = "3103"
+    PERDIDAS_ACUMULADAS = "3104"
+    RESULTADO_EJERCICIO = "3105"
+
+    # 4. Ingresos
+    VENTAS = "4101"
+    SERVICIOS = "4102"
+    DEVOLUCIONES_VENTAS = "4103"
+    OTROS_INGRESOS = "4201"
+    PRODUCTOS_FINANCIEROS = "4202"
+    DIFERENCIAL_CAMBIARIO = "4203"
+
+    # 5. Costos y Gastos
+    COSTO_VENTAS = "5101"
+    COMPRAS = "5102"
+    GASTOS_SOBRE_COMPRAS = "5103"
+    GASTOS_ADMIN = "5201"
+    SUELDOS_ADMIN = "5201-01"
+    BONIFICACION_ADMIN = "5201-02"
+    CUOTA_PATRONAL_ADMIN = "5201-03"
+    SUELDOS_EXTRA_ADMIN = "5201-04"
+    PRESTACIONES_ADMIN = "5201-05"
+    GASTOS_VENTAS = "5202"
+    SUELDOS_VENTAS = "5202-01"
+    BONIFICACION_VENTAS = "5202-02"
+    COMISIONES_VENTAS = "5202-03"
+    CUOTA_PATRONAL_VENTAS = "5202-04"
+    SUELDOS_EXTRA_VENTAS = "5202-05"
+    PRESTACIONES_VENTAS = "5202-06"
+    PUBLICIDAD = "5202-07"
+    GASTOS_FINANCIEROS = "5203"
+    INTERESES_PAGADOS = "5203-01"
+    COMISIONES_BANCARIAS = "5203-02"
+
 
 catalogo_cuentas: Dict[str, Dict[str, Dict[str, str]]] = {
     "1. Activo": {
         "1.1 Activo Corriente": {
-            "1101": "Caja General",
-            "1102": "Bancos (Moneda Nacional)",
-            "1103": "Cuentas por Cobrar Clientes",
-            "1103-R": "(-) Estimación para Cuentas Incobrables",
-            "1104": "Inventario de Mercancías",
-            "1105": "Material de Empaque",
-            "1106": "Moneda Extranjera",
-            "1107": "Crédito Fiscal",
-            "1108": "Combustibles y Lubricantes",
-            "1109": "Caja Chica",
-            "1110": "Anticipos a Proveedores",
-            "1111": "Anticipos sobre Sueldos a Empleados",
-            "1112": "Alquileres Pagados por Anticipado",
-            "1113": "Seguros Pagados por Anticipado",
+            Cuenta.CAJA: "Caja General",
+            Cuenta.BANCOS: "Bancos (Moneda Nacional)",
+            Cuenta.CLIENTES: "Cuentas por Cobrar Clientes",
+            Cuenta.ESTIMACION_INCOBRABLES: "(-) Estimación para Cuentas Incobrables",
+            Cuenta.MERCADERIAS: "Inventario de Mercancías",
+            Cuenta.MATERIAL_EMPAQUE: "Material de Empaque",
+            Cuenta.MONEDA_EXTRANJERA: "Moneda Extranjera",
+            Cuenta.IVA_CREDITO: "Crédito Fiscal",
+            Cuenta.COMBUSTIBLES: "Combustibles y Lubricantes",
+            Cuenta.CAJA_CHICA: "Caja Chica",
+            Cuenta.ANTICIPOS_PROVEEDORES: "Anticipos a Proveedores",
+            Cuenta.ANTICIPOS_SUELDOS: "Anticipos sobre Sueldos a Empleados",
+            Cuenta.ALQUILERES_ANTICIPADOS: "Alquileres Pagados por Anticipado",
+            Cuenta.SEGUROS_ANTICIPADOS: "Seguros Pagados por Anticipado",
         },
         "1.2 Activo No Corriente": {
-            "1201": "Terrenos",
-            "1202": "Edificios",
-            "1203": "Maquinaria y Equipo",
-            "1204": "Mobiliario y Equipo de Oficina",
-            "1205": "(-) Depreciación Acumulada",
-            "1205-01": "(-) Depreciación Acumulada Edificios",
-            "1205-02": "(-) Depreciación Acumulada Maquinaria",
-            "1205-03": "(-) Depreciación Acumulada Mobiliario y Equipo",
-            "1205-04": "(-) Depreciación Acumulada Vehículos",
-            "1206": "Vehículos",
-            "1207": "Documentos por Cobrar a Largo Plazo",
-            "1208": "Herramientas",
-            "1209": "Marcas y Patentes",
-            "1210": "(-) Amortización Acumulada",
+            Cuenta.TERRENOS: "Terrenos",
+            Cuenta.EDIFICIOS: "Edificios",
+            Cuenta.MAQUINARIA: "Maquinaria y Equipo",
+            Cuenta.MOBILIARIO: "Mobiliario y Equipo de Oficina",
+            Cuenta.DEPREC_ACUMULADA: "(-) Depreciación Acumulada",
+            Cuenta.DEPREC_ACUM_EDIFICIOS: "(-) Depreciación Acumulada Edificios",
+            Cuenta.DEPREC_ACUM_MAQUINARIA: "(-) Depreciación Acumulada Maquinaria",
+            Cuenta.DEPREC_ACUM_MOBILIARIO: "(-) Depreciación Acumulada Mobiliario y Equipo",
+            Cuenta.DEPREC_ACUM_VEHICULOS: "(-) Depreciación Acumulada Vehículos",
+            Cuenta.VEHICULOS: "Vehículos",
+            Cuenta.DOCS_COBRAR_LP: "Documentos por Cobrar a Largo Plazo",
+            Cuenta.HERRAMIENTAS: "Herramientas",
+            Cuenta.MARCAS_PATENTES: "Marcas y Patentes",
+            Cuenta.AMORT_ACUMULADA: "(-) Amortización Acumulada",
         },
     },
     "2. Pasivo": {
         "2.1 Pasivo Corriente": {
-            "2101": "Proveedores Locales",
-            "2102": "Cuentas por Pagar a Corto Plazo",
-            "2103": "Impuestos por Pagar",
-            "2104": "Sueldos y Salarios Retenidos",
-            "2104-01": "Cuotas IGSS por Pagar (Laboral + Patronal)",
-            "2104-02": "Retención ISR Sueldos por Pagar",
-            "2104-03": "Retención ISR Compras y Servicios por Pagar",
-            "2104-04": "Sueldos y Salarios por Pagar",
-            "2104-05": "Otras Retenciones por Pagar",
-            "2105": "IVA por Pagar",
-            "2106": "Acreedores",
-            "2107": "Intereses por Pagar",
-            "2108": "Provisiones para Prestaciones Laborales (Aguinaldo, Bono 14, Vacaciones)",
+            Cuenta.PROVEEDORES: "Proveedores Locales",
+            Cuenta.CUENTAS_POR_PAGAR_CP: "Cuentas por Pagar a Corto Plazo",
+            Cuenta.IMPUESTOS_POR_PAGAR: "Impuestos por Pagar",
+            Cuenta.SUELDOS_RETENIDOS: "Sueldos y Salarios Retenidos",
+            Cuenta.IGSS_POR_PAGAR: "Cuotas IGSS por Pagar (Laboral + Patronal)",
+            Cuenta.RETENCION_ISR_SUELDOS: "Retención ISR Sueldos por Pagar",
+            Cuenta.RETENCION_ISR_COMPRAS: "Retención ISR Compras y Servicios por Pagar",
+            Cuenta.SUELDOS_POR_PAGAR: "Sueldos y Salarios por Pagar",
+            Cuenta.OTRAS_RETENCIONES: "Otras Retenciones por Pagar",
+            Cuenta.IVA_DEBITO: "IVA por Pagar",
+            Cuenta.ACREEDORES: "Acreedores",
+            Cuenta.INTERESES_POR_PAGAR: "Intereses por Pagar",
+            Cuenta.PROVISIONES_LABORALES: "Provisiones para Prestaciones Laborales (Aguinaldo, Bono 14, Vacaciones)",
         },
         "2.2 Pasivo No Corriente": {
-            "2201": "Acreedores Hipotecarios",
-            "2202": "Préstamos Bancarios a Largo Plazo",
-            "2203": "Documentos por Pagar a Largo Plazo",
-            "2204": "Hipotecas",
-            "2205": "Reserva para Indemnizaciones Laborales",
+            Cuenta.ACREEDORES_HIPOTECARIOS: "Acreedores Hipotecarios",
+            Cuenta.PRESTAMOS_BANCARIOS: "Préstamos Bancarios a Largo Plazo",
+            Cuenta.DOCS_POR_PAGAR_LP: "Documentos por Pagar a Largo Plazo",
+            Cuenta.HIPOTECAS: "Hipotecas",
+            Cuenta.RESERVA_INDEMNIZACIONES: "Reserva para Indemnizaciones Laborales",
         },
     },
     "3. Capital / Patrimonio": {
         "3.1 Capital Contable": {
-            "3101": "Capital Social",
-            "3102": "Reserva Legal",
-            "3103": "Utilidades Acumuladas de Ejercicios Anteriores",
-            "3104": "(-) Pérdidas Acumuladas",
-            "3105": "Resultado del Ejercicio",
+            Cuenta.CAPITAL_SOCIAL: "Capital Social",
+            Cuenta.RESERVA_LEGAL: "Reserva Legal",
+            Cuenta.UTILIDADES_ACUMULADAS: "Utilidades Acumuladas de Ejercicios Anteriores",
+            Cuenta.PERDIDAS_ACUMULADAS: "(-) Pérdidas Acumuladas",
+            Cuenta.RESULTADO_EJERCICIO: "Resultado del Ejercicio",
         },
     },
     "4. Ingresos": {
         "4.1 Ingresos Ordinarios": {
-            "4101": "Ventas de Mercancías",
-            "4102": "Prestación de Servicios",
-            "4103": "(-) Devoluciones y Rebajas sobre Ventas",
+            Cuenta.VENTAS: "Ventas de Mercancías",
+            Cuenta.SERVICIOS: "Prestación de Servicios",
+            Cuenta.DEVOLUCIONES_VENTAS: "(-) Devoluciones y Rebajas sobre Ventas",
         },
         "4.2 Ingresos Extraordinarios": {
-            "4201": "Otros Ingresos",
-            "4202": "Productos Financieros (Intereses Ganados)",
-            "4203": "Diferenciales Cambiarios",
+            Cuenta.OTROS_INGRESOS: "Otros Ingresos",
+            Cuenta.PRODUCTOS_FINANCIEROS: "Productos Financieros (Intereses Ganados)",
+            Cuenta.DIFERENCIAL_CAMBIARIO: "Diferenciales Cambiarios",
         },
     },
     "5. Costos y Gastos": {
         "5.1 Costos": {
-            "5101": "Costo de Ventas",
-            "5102": "Compras de Materia Prima",
-            "5103": "Gastos sobre Compras",
+            Cuenta.COSTO_VENTAS: "Costo de Ventas",
+            Cuenta.COMPRAS: "Compras de Materia Prima",
+            Cuenta.GASTOS_SOBRE_COMPRAS: "Gastos sobre Compras",
         },
         "5.2 Gastos de Operación": {
-            "5201": "Gastos de Administración (Sueldos, Luz, Agua)",
-            "5201-01": "Sueldos de Administración",
-            "5201-02": "Bonificación Incentivo Administración",
-            "5201-03": "Cuota Patronal Administración",
-            "5201-04": "Sueldos Extraordinarios Administración",
-            "5201-05": "Prestaciones Laborales Administración",
-            "5202": "Gastos de Venta (Publicidad, Comisiones)",
-            "5202-01": "Sueldos de Ventas",
-            "5202-02": "Bonificación Incentivo Ventas",
-            "5202-03": "Comisiones sobre Ventas",
-            "5202-04": "Cuota Patronal Ventas",
-            "5202-05": "Sueldos Extraordinarios Ventas",
-            "5202-06": "Prestaciones Laborales Ventas",
-            "5202-07": "Publicidad y Propaganda",
-            "5203": "Gastos Financieros (Intereses Pagados, Comisiones Bancarias)",
-            "5203-01": "Intereses Pagados",
-            "5203-02": "Comisiones Bancarias",
+            Cuenta.GASTOS_ADMIN: "Gastos de Administración (Sueldos, Luz, Agua)",
+            Cuenta.SUELDOS_ADMIN: "Sueldos de Administración",
+            Cuenta.BONIFICACION_ADMIN: "Bonificación Incentivo Administración",
+            Cuenta.CUOTA_PATRONAL_ADMIN: "Cuota Patronal Administración",
+            Cuenta.SUELDOS_EXTRA_ADMIN: "Sueldos Extraordinarios Administración",
+            Cuenta.PRESTACIONES_ADMIN: "Prestaciones Laborales Administración",
+            Cuenta.GASTOS_VENTAS: "Gastos de Venta (Publicidad, Comisiones)",
+            Cuenta.SUELDOS_VENTAS: "Sueldos de Ventas",
+            Cuenta.BONIFICACION_VENTAS: "Bonificación Incentivo Ventas",
+            Cuenta.COMISIONES_VENTAS: "Comisiones sobre Ventas",
+            Cuenta.CUOTA_PATRONAL_VENTAS: "Cuota Patronal Ventas",
+            Cuenta.SUELDOS_EXTRA_VENTAS: "Sueldos Extraordinarios Ventas",
+            Cuenta.PRESTACIONES_VENTAS: "Prestaciones Laborales Ventas",
+            Cuenta.PUBLICIDAD: "Publicidad y Propaganda",
+            Cuenta.GASTOS_FINANCIEROS: "Gastos Financieros (Intereses Pagados, Comisiones Bancarias)",
+            Cuenta.INTERESES_PAGADOS: "Intereses Pagados",
+            Cuenta.COMISIONES_BANCARIAS: "Comisiones Bancarias",
         },
     },
 }
+
+
+# --- DICCIONARIO PLANO INDEXADO ---
+CUENTAS_PLANAS: Dict[str, str] = {
+    codigo: nombre
+    for clase in catalogo_cuentas.values()
+    for subgrupo in clase.values()
+    for codigo, nombre in subgrupo.items()
+}
+
+
+def obtener_nombre_cuenta(codigo: str | Cuenta) -> Optional[str]:
+    """Retorna el nombre formal de la cuenta a partir de su código o miembro de Cuenta."""
+    cod_str = str(codigo).strip()
+    return CUENTAS_PLANAS.get(cod_str)
 
 
 # --- LÓGICA DE NAVEGACIÓN Y CONSULTA ---
@@ -138,7 +249,7 @@ def listar_cuentas(filtro_clase: Optional[str] = None) -> List[Tuple[str, str, s
             continue
         for subgrupo, items in subgrupos.items():
             for codigo, nombre in items.items():
-                cuentas.append((clase, subgrupo, codigo, nombre))
+                cuentas.append((clase, subgrupo, str(codigo), nombre))
     return cuentas
 
 

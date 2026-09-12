@@ -1,10 +1,11 @@
 """Capa de presentación e interacción de consola para el sistema de apertura contable."""
 from decimal import Decimal, InvalidOperation
 import sys
-from typing import Optional
+from typing import Optional, Tuple
 
 from apertura.catalogo import CatalogoService
 from apertura.contabilidad import MotorApertura
+from apertura.models import CuentaCatalogo, PartidaApertura, ResumenBalance
 from apertura.reportes import exportar_reporte, generar_texto_balance, generar_texto_partida
 
 
@@ -49,8 +50,42 @@ def mostrar_cuentas_registradas(motor: MotorApertura) -> None:
     print("   " + "-" * 65)
 
 
-def iniciar_flujo_apertura() -> None:
-    """Punto de entrada interactivo principal."""
+def seleccionar_cuenta_interactiva(catalogo: CatalogoService, entrada: str) -> Optional[CuentaCatalogo]:
+    """Busca coincidencias y, si hay varias, permite al usuario seleccionar interactivamente."""
+    coincidencias = catalogo.buscar_coincidencias(entrada)
+    if not coincidencias:
+        return None
+
+    if len(coincidencias) == 1:
+        c = coincidencias[0]
+        tag_reg = " (Cuenta Regularizadora)" if c.es_regularizadora else ""
+        print(f"   -> Seleccionada: [{c.codigo}] {c.nombre}{tag_reg}")
+        return c
+
+    print(f"\n   Coincidencias encontradas ({len(coincidencias)}):")
+    limite = min(len(coincidencias), 8)
+    for idx, c in enumerate(coincidencias[:limite], 1):
+        tag_reg = " (-)" if c.es_regularizadora else "    "
+        print(f"     [{idx}] {c.codigo:<9} {tag_reg} {c.nombre}")
+
+    while True:
+        sel = input("   Elija el número de la cuenta o presione Enter para cancelar: ").strip()
+        if not sel:
+            return None
+        if sel.isdigit() and 1 <= int(sel) <= limite:
+            c = coincidencias[int(sel) - 1]
+            tag_reg = " (Cuenta Regularizadora)" if c.es_regularizadora else ""
+            print(f"   -> Seleccionada: [{c.codigo}] {c.nombre}{tag_reg}")
+            return c
+        print(f"   (!) Ingrese un número entre 1 y {limite}.")
+
+
+def iniciar_flujo_apertura(
+    numero_partida: int = 1,
+    exportar_archivo: bool = True,
+    imprimir_reportes: bool = True,
+) -> Tuple[Optional[ResumenBalance], Optional[PartidaApertura]]:
+    """Punto de entrada interactivo principal. Retorna (ResumenBalance, PartidaApertura) o (None, None)."""
     print("=" * 75)
     print("      SISTEMA DE APERTURA CONTABLE: BALANCE Y PARTIDA DE DIARIO")
     print("=" * 75)
@@ -63,7 +98,7 @@ def iniciar_flujo_apertura() -> None:
         catalogo = CatalogoService.desde_modulo()
     except RuntimeError as e:
         print(f"\n[ERROR] {e}")
-        return
+        return None, None
 
     motor = MotorApertura()
 
@@ -86,14 +121,16 @@ def iniciar_flujo_apertura() -> None:
                 print(f"   [!] No se encontró la cuenta '{target}'.")
             continue
 
-        # Búsqueda en catálogo
-        cuenta_info = catalogo.buscar(entrada)
+        # Búsqueda interactiva en catálogo
+        cuenta_info = seleccionar_cuenta_interactiva(catalogo, entrada)
         if not cuenta_info:
-            opcion = pedir_clasificacion_manual(entrada)
-            cuenta_info = catalogo.crear_cuenta_manual(entrada, opcion)
+            resp = input(f"   [!] No se seleccionó cuenta para '{entrada}'. ¿Deseas clasificarla manualmente? (s/n): ").strip().lower()
+            if resp in ("s", "si", "y", "yes"):
+                opcion = pedir_clasificacion_manual(entrada)
+                cuenta_info = catalogo.crear_cuenta_manual(entrada, opcion)
+            else:
+                continue
         else:
-            tag_reg = " (Cuenta Regularizadora)" if cuenta_info.es_regularizadora else ""
-            print(f"   Identificada: [{cuenta_info.codigo}] {cuenta_info.nombre}{tag_reg}")
             print(f"   Ubicación   : {cuenta_info.clase} -> {cuenta_info.subgrupo}")
 
         monto = pedir_monto(cuenta_info.nombre)
@@ -102,7 +139,7 @@ def iniciar_flujo_apertura() -> None:
 
     if not motor.items:
         print("\nNo se registraron cuentas. Saliendo del programa.")
-        return
+        return None, None
 
     # Cálculo del balance
     resumen = motor.calcular_balance()
@@ -132,14 +169,18 @@ def iniciar_flujo_apertura() -> None:
             )
 
     # Generar reportes
-    partida = motor.generar_partida_apertura()
+    partida = motor.generar_partida_apertura(numero=numero_partida)
 
-    print("\n" + generar_texto_balance(resumen))
-    print(generar_texto_partida(partida))
+    if imprimir_reportes:
+        print("\n" + generar_texto_balance(resumen))
+        print(generar_texto_partida(partida))
 
-    # Preguntar si se desea exportar a archivo
-    exportar = input("¿Deseas guardar estos reportes en un archivo de texto? (s/n) [n]: ").strip().lower()
-    if exportar in ("s", "si", "y", "yes"):
-        nombre_arch = input("Nombre de archivo [apertura_contable.txt]: ").strip() or "apertura_contable.txt"
-        ruta_completa = exportar_reporte(resumen, partida, nombre_arch)
-        print(f"   [OK] Reporte exportado exitosamente en:\n        {ruta_completa}\n")
+    # Preguntar si se desea exportar a archivo si está habilitado
+    if exportar_archivo:
+        exportar = input("¿Deseas guardar estos reportes en un archivo de texto? (s/n) [n]: ").strip().lower()
+        if exportar in ("s", "si", "y", "yes"):
+            nombre_arch = input("Nombre de archivo [apertura_contable.txt]: ").strip() or "apertura_contable.txt"
+            ruta_completa = exportar_reporte(resumen, partida, nombre_arch)
+            print(f"   [OK] Reporte exportado exitosamente en:\n        {ruta_completa}\n")
+
+    return resumen, partida

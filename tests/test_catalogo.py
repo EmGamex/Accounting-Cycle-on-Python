@@ -37,6 +37,25 @@ class TestCatalogoContable(unittest.TestCase):
         codigos = [item[2] for item in encontrados_igss]
         self.assertIn("2104-01", codigos)
 
+    def test_cuenta_strenum_y_mapeo_plano(self):
+        """Verifica que Cuenta sea un StrEnum compatible con cadenas y que CUENTAS_PLANAS funcione."""
+        # 1. Comportamiento como string nativo
+        self.assertIsInstance(cat.Cuenta.CAJA, str)
+        self.assertEqual(cat.Cuenta.CAJA, "1101")
+        self.assertEqual(str(cat.Cuenta.BANCOS), "1102")
+        self.assertEqual(cat.Cuenta.CAPITAL_SOCIAL, "3101")
+
+        # 2. Acceso O(1) vía CUENTAS_PLANAS y obtener_nombre_cuenta
+        self.assertEqual(cat.obtener_nombre_cuenta(cat.Cuenta.CAJA), "Caja General")
+        self.assertEqual(cat.obtener_nombre_cuenta("1102"), "Bancos (Moneda Nacional)")
+        self.assertEqual(cat.obtener_nombre_cuenta(cat.Cuenta.PROVEEDORES), "Proveedores Locales")
+        self.assertIsNone(cat.obtener_nombre_cuenta("9999-INEXISTENTE"))
+
+        # 3. El árbol catalogo_cuentas usa los miembros de Cuenta
+        activo_corriente = cat.catalogo_cuentas["1. Activo"]["1.1 Activo Corriente"]
+        self.assertIn(cat.Cuenta.CAJA, activo_corriente)
+        self.assertEqual(activo_corriente[cat.Cuenta.CAJA], "Caja General")
+
 
 if __name__ == "__main__":
     unittest.main()

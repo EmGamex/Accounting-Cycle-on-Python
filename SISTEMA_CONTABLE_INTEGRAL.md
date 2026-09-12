@@ -315,14 +315,14 @@ flowchart LR
   - [x] Catálogo Contable Jerárquico NIIF/SAT (`catalogo_contable.py`).
   - [x] Módulo de Balance de Apertura y Partida #1 (`apertura/`).
   - [x] Módulo de Planilla de Sueldos con Partida Contable (`planilla/`).
-* **Fase 2 (Próximo Paso Inmediato):**
-  - [ ] Crear el módulo `diario/` con la estructura unificada de `PartidaDiario`.
-  - [ ] Crear conectores para que `apertura` y `planilla` alimenten directamente al Diario.
-  - [ ] Permitir ingreso de partidas operativas adicionales (ventas, compras, cobros, pagos).
-* **Fase 3:**
+* **Fase 2 (Completada):**
+  - [x] Crear el módulo `diario/` con la estructura unificada de `PartidaDiario`.
+  - [x] Crear conectores para que `apertura` y `planilla` alimenten directamente al Diario.
+  - [x] Permitir ingreso de partidas operativas adicionales (ventas, compras, cobros, pagos).
+* **Fase 3 (Próximo Paso Inmediato):**
   - [ ] Crear el módulo `mayor/` que agrupe automáticamente el Diario y genere las T-Gráficas.
   - [ ] Crear el módulo `balance/` que tome el Mayor y produzca la matriz de 4 Columnas.
 * **Fase 4:**
   - [ ] Implementar los exportadores a Excel (`openpyxl`) para generar el libro maestro de 6 hojas listo para impresión y entrega legal.
 * **Fase 5:**
-  - [ ] Menú de consola amigable e interactivo (`main.py`) que permita operar todo el flujo con 1 solo comando.
+  - [x] Menú de consola amigable e interactivo (`main.py`) que permita operar todo el flujo con 1 solo comando.

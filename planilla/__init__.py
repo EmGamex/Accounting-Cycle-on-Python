@@ -17,6 +17,7 @@ from .io_handlers import (
     imprimir_partida,
     solicitar_datos_interactivo,
 )
+from .cli import iniciar_flujo_planillas
 
 __all__ = [
     "BONIFICACION_LEY",
@@ -36,4 +37,5 @@ __all__ = [
     "cargar_empleados_csv",
     "exportar_planilla_csv",
     "crear_plantilla_csv_ejemplo",
+    "iniciar_flujo_planillas",
 ]
