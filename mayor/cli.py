@@ -15,12 +15,18 @@ from reportes.t_graficas import (
     generar_texto_t_grafica,
     generar_texto_todas_t_graficas,
 )
-from ui import console, imprimir_alerta, imprimir_aviso, imprimir_banner, imprimir_exito
+from config import MENSAJE_ALERTA_OPCION, OPCION_SALIR
+from ui import (
+    console,
+    imprimir_alerta,
+    imprimir_aviso,
+    imprimir_banner,
+    imprimir_coincidencias_cuentas,
+    imprimir_exito,
+    imprimir_menu_opciones,
+)
 from .engine import GestorLibroMayor, mayorizar_libro_diario
 from .exceptions import MayorError
-
-OPCION_SALIR = "0"
-MENSAJE_ALERTA_OPCION = "Opción no reconocida. Intente nuevamente."
 
 
 class AccionMenu(NamedTuple):
@@ -72,9 +78,7 @@ def _consultar_t_grafica_individual(gestor_mayor: GestorLibroMayor) -> None:
     if len(coincidencias) == 1:
         cuenta = coincidencias[0]
     else:
-        console.print(f"\nSe encontraron [cyan]{len(coincidencias)}[/cyan] cuentas:")
-        for idx, c in enumerate(coincidencias, start=1):
-            console.print(f"  [bold cyan][{idx}][/bold cyan] [{c.codigo}] {c.nombre}")
+        imprimir_coincidencias_cuentas(coincidencias, limite=len(coincidencias))
         sel = input("Seleccione el número de cuenta: ").strip()
         if sel.isdigit() and 1 <= int(sel) <= len(coincidencias):
             cuenta = coincidencias[int(sel) - 1]
@@ -140,6 +144,13 @@ def _obtener_acciones_mayor() -> list[AccionMenu]:
     ]
 
 
+def _mostrar_menu(acciones: list[AccionMenu]) -> None:
+    """Imprime las opciones disponibles del menú basándose en su posición."""
+    console.print("\nOperaciones de Libro Mayor disponibles:")
+    opciones = [(str(idx), item.descripcion) for idx, item in enumerate(acciones, start=1)]
+    imprimir_menu_opciones(opciones, texto_salir="Volver al menú principal", salir_codigo=OPCION_SALIR)
+
+
 def iniciar_flujo_mayor(
     gestor_mayor: Optional[GestorLibroMayor] = None,
     gestor_diario: Optional[GestorLibroDiario] = None,
@@ -156,10 +167,7 @@ def iniciar_flujo_mayor(
 
     while True:
         _imprimir_resumen_mayor(gestor_mayor)
-        console.print("\nOperaciones de Libro Mayor disponibles:")
-        for idx, item in enumerate(acciones, start=1):
-            console.print(f"  [bold cyan][{idx}][/bold cyan] {item.descripcion}")
-        console.print(f"  [bold dim][{OPCION_SALIR}][/bold dim] Volver al menú principal")
+        _mostrar_menu(acciones)
 
         prompt_rango = f"[1-{len(acciones)}, {OPCION_SALIR}]"
         seleccion = input(f"\nSeleccione una opción {prompt_rango}: ").strip()

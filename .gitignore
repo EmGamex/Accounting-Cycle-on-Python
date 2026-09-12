@@ -223,7 +223,14 @@ prueba_*.txt
 apertura_*.txt
 apertura_contable.txt
 libro_diario.json
+ejercicio_contable.json
+plantilla_empleados.csv
+reporte_planilla.csv
+t_graficas_mayor.txt
+libro_mayor_formal.txt
+*.csv
 temp_*
 temp_test_*
 *.tmp
 *.state
+

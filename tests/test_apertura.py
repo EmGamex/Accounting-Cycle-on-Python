@@ -173,6 +173,13 @@ class TestAperturaContable(unittest.TestCase):
         self.assertTrue(partida.cuadra)
         self.assertEqual(partida.total_debe, Decimal("8000.00"))
 
+    @patch("builtins.input", side_effect=["9", "invalido", "1"])
+    def test_pedir_clasificacion_manual_reintentos(self, mock_input):
+        """Verifica que pedir_clasificacion_manual reintente hasta obtener una opción válida (1-5)."""
+        from apertura.cli import pedir_clasificacion_manual
+        opcion = pedir_clasificacion_manual("Cuenta Desconocida")
+        self.assertEqual(opcion, "1")
+
 
 if __name__ == "__main__":
     unittest.main()

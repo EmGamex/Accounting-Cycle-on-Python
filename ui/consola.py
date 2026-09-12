@@ -1,7 +1,7 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """Instancia global de consola y funciones utilitarias de presentación y entrada."""
 from decimal import Decimal
-from typing import Optional, Sequence, Tuple
+from typing import Any, Optional, Sequence, Tuple
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
@@ -71,7 +71,8 @@ def imprimir_menu_opciones(
 ) -> None:
     """Imprime una lista de opciones estilizadas numeradas con etiquetas de color."""
     for idx, (etiqueta, desc) in enumerate(opciones, start=1):
-        console.print(f"  [{COLOR_INDICE}][{idx}][/{COLOR_INDICE}] {desc}")
+        codigo = etiqueta if etiqueta else str(idx)
+        console.print(f"  [{COLOR_INDICE}][{codigo}][/{COLOR_INDICE}] {desc}")
     console.print(f"  [{COLOR_SALIR}][{salir_codigo}][/{COLOR_SALIR}] {texto_salir}")
 
 
@@ -88,3 +89,38 @@ def imprimir_alerta(mensaje: str) -> None:
 def imprimir_aviso(mensaje: str) -> None:
     """Muestra un aviso informativo o retorno de flujo."""
     console.print(f"  [{COLOR_SECUNDARIO}][!][/{COLOR_SECUNDARIO}] {mensaje}")
+
+
+def imprimir_menu_clasificacion(nombre_cuenta: str) -> None:
+    """Muestra el diálogo y opciones disponibles para clasificar una cuenta desconocida."""
+    console.print(f"\n  [{COLOR_AVISO}][!][/{COLOR_AVISO}] '{nombre_cuenta}' no se encontró en el catálogo.")
+    console.print("  [bold]Clasifícala:[/bold]")
+    console.print("  [cyan]1[/cyan]. Activo Corriente     | [cyan]2[/cyan]. Activo No Corriente")
+    console.print("  [cyan]3[/cyan]. Pasivo Corriente    | [cyan]4[/cyan]. Pasivo No Corriente")
+    console.print("  [cyan]5[/cyan]. Capital / Patrimonio")
+
+
+def imprimir_coincidencias_cuentas(coincidencias: Sequence[Any], limite: int = 8) -> None:
+    """Muestra la lista numerada de coincidencias de catálogo encontradas."""
+    console.print(f"\n  Coincidencias encontradas ([bold cyan]{len(coincidencias)}[/bold cyan]):")
+    for idx, c in enumerate(coincidencias[:limite], 1):
+        es_reg = getattr(c, "es_regularizadora", False)
+        tag_reg = " [yellow](-)[/yellow]" if es_reg else "    "
+        console.print(f"    [[bold cyan]{idx}[/bold cyan]] [cyan]{c.codigo:<9}[/cyan]{tag_reg} {c.nombre}")
+
+
+def imprimir_cuenta_seleccionada(cuenta: Any) -> None:
+    """Muestra la cuenta que fue seleccionada de forma explícita."""
+    es_reg = getattr(cuenta, "es_regularizadora", False)
+    tag_reg = " [bold yellow](Cuenta Regularizadora)[/bold yellow]" if es_reg else ""
+    console.print(f"  [green]->[/green] Seleccionada: [[cyan]{cuenta.codigo}[/cyan]] {cuenta.nombre}{tag_reg}")
+
+
+def imprimir_resumen_balance_apertura(resumen: Any) -> None:
+    """Muestra el resumen de totales de Activo, Pasivo y Patrimonio con sus colores semánticos."""
+    console.rule(style=COLOR_SECUNDARIO)
+    console.print(
+        f"  Activo Neto: [bold green]{formatear_moneda(resumen.total_activo)}[/bold green] | "
+        f"Pasivo: [bold yellow]{formatear_moneda(resumen.total_pasivo)}[/bold yellow] | "
+        f"Patrimonio: [bold cyan]{formatear_moneda(resumen.total_patrimonio)}[/bold cyan]"
+    )

@@ -8,12 +8,16 @@ from diario.asistentes import (
     registrar_venta_asistida,
 )
 from diario.engine import GestorLibroDiario
-from reportes import generar_texto_libro_diario, imprimir_partida_rich
-from ui import console, imprimir_alerta, imprimir_banner
-
-# Constantes de formato y presentación
-OPCION_SALIR = "0"
-MENSAJE_ALERTA_OPCION = "Opción no reconocida. Intente nuevamente."
+from config import MENSAJE_ALERTA_OPCION, OPCION_SALIR
+from reportes import imprimir_partida_rich
+from ui import (
+    COLOR_EXITO,
+    COLOR_SECUNDARIO,
+    console,
+    imprimir_alerta,
+    imprimir_banner,
+    imprimir_menu_opciones,
+)
 
 
 class AccionMenu(NamedTuple):
@@ -24,15 +28,15 @@ class AccionMenu(NamedTuple):
 
 def _imprimir_encabezado() -> None:
     """Imprime el banner principal del sistema."""
-    imprimir_banner("SISTEMA DE LIBRO DIARIO CONTABLE (GUATEMALA)", border_style="cyan")
+    imprimir_banner("SISTEMA DE LIBRO DIARIO CONTABLE (GUATEMALA)", border_style=COLOR_SECUNDARIO)
 
 
 def _imprimir_resumen_libro(gestor: GestorLibroDiario) -> None:
     """Muestra el estado actual del libro diario."""
     total_partidas = len(gestor.libro.partidas)
     console.print(
-        f"\n[bold]Libro Diario Actual:[/bold] [cyan]{total_partidas}[/cyan] partida(s) registradas "
-        f"| [bold]Siguiente:[/bold] [green]Partida #{gestor.siguiente_numero}[/green]"
+        f"\n[bold]Libro Diario Actual:[/bold] [{COLOR_SECUNDARIO}]{total_partidas}[/{COLOR_SECUNDARIO}] partida(s) registradas "
+        f"| [bold]Siguiente:[/bold] [{COLOR_EXITO}]Partida #{gestor.siguiente_numero}[/{COLOR_EXITO}]"
     )
 
 
@@ -74,9 +78,8 @@ def _obtener_acciones_diario() -> list[AccionMenu]:
 def _mostrar_menu(acciones: list[AccionMenu]) -> None:
     """Imprime las opciones disponibles del menú basándose en su posición."""
     console.print("Operaciones diarias disponibles:")
-    for idx, item in enumerate(acciones, start=1):
-        console.print(f"  [bold cyan][{idx}][/bold cyan] {item.descripcion}")
-    console.print(f"  [bold dim][{OPCION_SALIR}][/bold dim] Volver / Salir")
+    opciones = [(str(idx), item.descripcion) for idx, item in enumerate(acciones, start=1)]
+    imprimir_menu_opciones(opciones, texto_salir="Volver / Salir", salir_codigo=OPCION_SALIR)
 
 
 def iniciar_flujo_diario(gestor: Optional[GestorLibroDiario] = None) -> None:
@@ -95,7 +98,7 @@ def iniciar_flujo_diario(gestor: Optional[GestorLibroDiario] = None) -> None:
         seleccion = input(f"\nSeleccione una opción {prompt_rango}: ").strip()
 
         if seleccion == OPCION_SALIR:
-            console.print("\n[bold green]¡Gracias por utilizar el Sistema de Libro Diario![/bold green]")
+            console.print(f"\n[{COLOR_EXITO}]¡Gracias por utilizar el Sistema de Libro Diario![/{COLOR_EXITO}]")
             break
 
         if seleccion.isdigit() and 1 <= int(seleccion) <= len(acciones):
