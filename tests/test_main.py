@@ -177,5 +177,20 @@ class TestMainOrquestador(unittest.TestCase):
             self.assertFalse(orquestador.pedir_confirmacion("¿Confirmar?"))
             self.assertTrue(orquestador.pedir_confirmacion("¿Confirmar?", default=True))
 
+    def test_orquestador_guarda_ejercicio_unificado(self):
+        """Verifica que el orquestador guarde en formato unificado de EjercicioContable."""
+        import tempfile
+        from main import menu_persistencia
+        from diario.engine import GestorLibroDiario
+        from persistencia import cargar_ejercicio_json
 
-
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            test_file = os.path.join(tmp_dir, "test_ejercicio_unif.json")
+            with patch("main.ARCHIVO_EJERCICIO_DEFAULT", test_file):
+                gestor = GestorLibroDiario()
+                with patch("builtins.input", side_effect=["1", "0"]):
+                    menu_persistencia(gestor)
+                self.assertTrue(os.path.exists(test_file))
+                ej = cargar_ejercicio_json(test_file)
+                self.assertEqual(ej.version, "1.1")
+                self.assertEqual(ej.nombre_empresa, "Empresa Ejemplo, S.A.")
