@@ -41,19 +41,9 @@ def mostrar_cuentas_registradas(motor: MotorApertura) -> None:
         imprimir_alerta("No hay cuentas registradas aún.")
         return
 
-    from rich import box
-    from rich.table import Table
+    from ui.tablas import generar_tabla_cuentas_registradas
 
-    tabla = Table(title="Cuentas Registradas Actualmente", box=box.ROUNDED)
-    tabla.add_column("Código", style="dim cyan")
-    tabla.add_column("Nombre", style="white")
-    tabla.add_column("Tipo", style="yellow")
-    tabla.add_column("Monto (Q)", justify="right", style="bold green")
-
-    for cta in items:
-        tipo = "(-)" if cta.es_regularizadora else "Normal"
-        tabla.add_row(cta.codigo, cta.nombre, tipo, f"Q{cta.monto:,.2f}")
-
+    tabla = generar_tabla_cuentas_registradas(items)
     console.print(tabla)
 
 
@@ -126,7 +116,6 @@ def iniciar_flujo_apertura(
                 imprimir_alerta(f"No se encontró la cuenta '{target}'.")
             continue
 
-        # Búsqueda interactiva en catálogo
         cuenta_info = seleccionar_cuenta_interactiva(catalogo, entrada)
         if not cuenta_info:
             resp = input(f"   [!] No se seleccionó cuenta para '{entrada}'. ¿Deseas clasificarla manualmente? (s/n): ").strip().lower()
@@ -146,10 +135,8 @@ def iniciar_flujo_apertura(
         print("\nNo se registraron cuentas. Saliendo del programa.")
         return None, None
 
-    # Cálculo del balance
     resumen = motor.calcular_balance()
 
-    # Ajuste residual de capital si es necesario
     if resumen.diferencia_capital != Decimal("0.00"):
         print("\n" + "-" * 75)
         print(

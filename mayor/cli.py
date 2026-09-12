@@ -95,37 +95,12 @@ def _ver_mayor_formal(gestor_mayor: GestorLibroMayor) -> None:
 
 def _ver_resumen_sumas_y_saldos(gestor_mayor: GestorLibroMayor) -> None:
     """Imprime una tabla compacta con las sumas y saldos de cada cuenta."""
+    from ui.tablas import generar_tabla_sumas_y_saldos
+
     mayor = gestor_mayor.sincronizar()
-    cuentas = mayor.cuentas_ordenadas
-
-    tabla = Table(title="RESUMEN DE CUENTAS MAYORIZADAS (SUMAS Y SALDOS)", box=box.ROUNDED, show_footer=True)
-    tabla.add_column("Código", style="dim cyan", no_wrap=True)
-    tabla.add_column("Cuenta", style="white")
-    tabla.add_column("Debe", justify="right", style="green", footer_style="bold green", no_wrap=True)
-    tabla.add_column("Haber", justify="right", style="green", footer_style="bold green", no_wrap=True)
-    tabla.add_column("S.Deudor", justify="right", style="bold green", footer_style="bold green", no_wrap=True)
-    tabla.add_column("S.Acreedor", justify="right", style="bold green", footer_style="bold green", no_wrap=True)
-
-    for c in cuentas:
-        d_str = formato_moneda(c.total_debe)
-        h_str = formato_moneda(c.total_haber)
-        sd_str = formato_moneda(c.saldo_deudor) if c.saldo_deudor > 0 else "-"
-        sa_str = formato_moneda(c.saldo_acreedor) if c.saldo_acreedor > 0 else "-"
-        nom_trunc = c.nombre[:26] + ".." if len(c.nombre) > 28 else c.nombre
-        tabla.add_row(c.codigo, nom_trunc, d_str, h_str, sd_str, sa_str)
-
-    tot_d = formato_moneda(mayor.total_debe)
-    tot_h = formato_moneda(mayor.total_haber)
-    tot_sd = formato_moneda(mayor.total_saldos_deudores)
-    tot_sa = formato_moneda(mayor.total_saldos_acreedores)
-
-    tabla.columns[1].footer = "SUMAS:"
-    tabla.columns[2].footer = tot_d
-    tabla.columns[3].footer = tot_h
-    tabla.columns[4].footer = tot_sd
-    tabla.columns[5].footer = tot_sa
-
+    tabla = generar_tabla_sumas_y_saldos(mayor)
     console.print(tabla)
+
     cuadre_msg = "CUADRE EXACTO" if mayor.cuadra else "DESCUADRADO"
     color = "green" if mayor.cuadra else "red"
     console.print(f"Estado: [[bold {color}]{cuadre_msg}[/bold {color}]]")

@@ -8,6 +8,12 @@ from diario.cli import iniciar_flujo_diario
 from diario.conectores import de_partida_apertura, de_partida_planilla
 from diario.engine import GestorLibroDiario
 from mayor.cli import iniciar_flujo_mayor
+from config import (
+    ARCHIVO_EJERCICIO_DEFAULT as CFG_ARCHIVO_EJERCICIO_DEFAULT,
+    MENSAJE_ALERTA_OPCION as CFG_MENSAJE_ALERTA_OPCION,
+    OPCION_SALIR as CFG_OPCION_SALIR,
+    RESPUESTAS_AFIRMATIVAS as CFG_RESPUESTAS_AFIRMATIVAS,
+)
 from ui import (
     console,
     formatear_moneda,
@@ -18,11 +24,11 @@ from ui import (
     imprimir_exito,
 )
 
-# Constantes de configuración y presentación
-ARCHIVO_EJERCICIO_DEFAULT = "libro_diario.json"
-RESPUESTAS_AFIRMATIVAS = ("s", "si", "y", "yes", "")
-OPCION_SALIR = "0"
-MENSAJE_ALERTA_OPCION = "Opción no reconocida. Intente nuevamente."
+# Constantes de configuración y presentación (con alias para compatibilidad y patching en tests)
+ARCHIVO_EJERCICIO_DEFAULT = CFG_ARCHIVO_EJERCICIO_DEFAULT
+RESPUESTAS_AFIRMATIVAS = CFG_RESPUESTAS_AFIRMATIVAS
+OPCION_SALIR = CFG_OPCION_SALIR
+MENSAJE_ALERTA_OPCION = CFG_MENSAJE_ALERTA_OPCION
 
 
 class AccionMenu(NamedTuple):

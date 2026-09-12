@@ -22,7 +22,6 @@ def generar_texto_libro_diario(
     """
     bloques: List[str] = []
 
-    # Encabezado formal del libro
     bloques.append(linea_doble(ancho))
     bloques.append(centrar_titulo(empresa, ancho))
     bloques.append(centrar_titulo("LIBRO DIARIO DE OPERACIONES", ancho))
@@ -38,7 +37,6 @@ def generar_texto_libro_diario(
         bloques.append(generar_texto_partida(p, ancho=ancho))
         bloques.append("")
 
-    # Resumen y cierre del Libro Diario
     bloques.append(linea_doble(ancho))
     bloques.append(centrar_titulo("RESUMEN GENERAL DEL LIBRO DIARIO", ancho))
     bloques.append(linea_doble(ancho))

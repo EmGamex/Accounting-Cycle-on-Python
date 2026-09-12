@@ -264,32 +264,16 @@ def buscar_cuenta(termino: str) -> List[Tuple[str, str, str, str]]:
 
 
 def generar_arbol_rich(filtro_clase: Optional[str] = None):
-    """Genera un árbol jerárquico de cuentas contables compatible con Rich."""
-    from rich.tree import Tree
-
-    titulo = "Catálogo Contable NIIF/SAT (Guatemala)"
-    if filtro_clase:
-        titulo += f" - Filtro: {filtro_clase}"
-    arbol = Tree(f"[bold cyan]{titulo}[/bold cyan]")
-
-    for clase, subgrupos in catalogo_cuentas.items():
-        if filtro_clase and filtro_clase.lower() not in clase.lower():
-            continue
-        rama_clase = arbol.add(f"[bold yellow]{clase.upper()}[/bold yellow]")
-        for subgrupo, cuentas in subgrupos.items():
-            rama_subgrupo = rama_clase.add(f"[cyan]{subgrupo}[/cyan]")
-            for codigo, nombre in cuentas.items():
-                rama_subgrupo.add(f"[bold green]{str(codigo):<8}[/bold green] │ {nombre}")
-    return arbol
+    """Genera un árbol jerárquico de cuentas contables compatible con Rich (delega a ui.arbol)."""
+    from ui.arbol import generar_arbol_catalogo
+    return generar_arbol_catalogo(filtro_clase=filtro_clase)
 
 
 def mostrar_catalogo_rich(filtro_clase: Optional[str] = None, console_obj=None) -> None:
-    """Muestra el catálogo contable en consola utilizando Rich Tree."""
+    """Muestra el catálogo contable en consola utilizando Rich Tree (delega a ui.arbol)."""
     try:
-        from ui import console
-        c = console_obj or console
-        arbol = generar_arbol_rich(filtro_clase=filtro_clase)
-        c.print(arbol)
+        from ui.arbol import mostrar_catalogo_arbol
+        mostrar_catalogo_arbol(filtro_clase=filtro_clase, console_obj=console_obj)
     except ImportError:
         imprimir_arbol_catalogo()
 

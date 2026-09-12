@@ -67,61 +67,20 @@ def solicitar_datos_interactivo() -> DatosEmpleado:
 
 
 def imprimir_boleta(r: ResultadoPlanilla) -> None:
-    """Muestra en pantalla la boleta individual de pago con Rich."""
-    from rich import box
-    from rich.table import Table
+    """Muestra en pantalla la boleta individual de pago con Rich (delega a ui.tablas)."""
     from ui import console
+    from ui.tablas import generar_tabla_boleta
 
-    titulo = f"BOLETA DE PAGO: {r.empleado.upper()} ({r.departamento})"
-    tabla = Table(title=titulo, box=box.ROUNDED)
-    tabla.add_column("Concepto", style="white")
-    tabla.add_column("Monto (Q)", justify="right", style="bold green")
-
-    filas: List[Tuple[str, Decimal, bool]] = [
-        ("Sueldo Base Ordinario", r.sueldo_base, True),
-        ("Comisiones sobre Ventas", r.comisiones, r.comisiones > Decimal("0.00")),
-        (f"Sueldo Extra ({r.horas_extras_trabajadas}h)", r.sueldo_extraordinario, r.sueldo_extraordinario > Decimal("0.00")),
-        ("Bonificación Incentivo", r.bonificacion_ley, True),
-        ("TOTAL DEVENGADO", r.total_devengado, True),
-        ("Cuota Laboral IGSS (4.83%)", r.descuento_igss, True),
-        ("Retención ISR", r.descuento_isr, r.descuento_isr > Decimal("0.00")),
-        ("Anticipo sobre Sueldos", r.prestamos_deudas, r.prestamos_deudas > Decimal("0.00")),
-        ("Deudores Empleados / Otros", r.otros_descuentos, r.otros_descuentos > Decimal("0.00")),
-        ("TOTAL DESCUENTOS", r.total_descuentos, True),
-        ("LÍQUIDO A RECIBIR", r.liquido_recibir, True),
-    ]
-
-    for etiqueta, monto, mostrar in filas:
-        if mostrar:
-            estilo = "bold cyan" if "TOTAL" in etiqueta or "LÍQUIDO" in etiqueta else "white"
-            tabla.add_row(f"[{estilo}]{etiqueta}[/{estilo}]", f"Q{monto:,.2f}")
-
+    tabla = generar_tabla_boleta(r)
     console.print(tabla)
 
 
 def imprimir_partida(p: PartidaContable) -> None:
-    """Muestra en pantalla el asiento contable en partida doble con Rich."""
-    from rich import box
-    from rich.table import Table
+    """Muestra en pantalla el asiento contable en partida doble con Rich (delega a ui.tablas)."""
     from ui import console, imprimir_alerta, imprimir_exito
+    from ui.tablas import generar_tabla_partida_nomina
 
-    tabla = Table(title="PARTIDA CONTABLE DE SUELDOS Y SALARIOS", box=box.ROUNDED, show_footer=True)
-    tabla.add_column("Código / Cuenta", style="white")
-    tabla.add_column("Debe (Q)", justify="right", style="green", footer_style="bold green")
-    tabla.add_column("Haber (Q)", justify="right", style="green", footer_style="bold green")
-
-    for cuenta, monto in p.debe:
-        if monto > Decimal("0.00"):
-            tabla.add_row(cuenta, f"Q{monto:,.2f}", "")
-
-    for cuenta, monto in p.haber:
-        if monto > Decimal("0.00"):
-            tabla.add_row(f"  a: {cuenta}", "", f"Q{monto:,.2f}")
-
-    tabla.columns[0].footer = "SUMAS IGUALES"
-    tabla.columns[1].footer = f"Q{p.total_debe:,.2f}"
-    tabla.columns[2].footer = f"Q{p.total_haber:,.2f}"
-
+    tabla = generar_tabla_partida_nomina(p)
     console.print(tabla)
     if p.cuadra:
         imprimir_exito("La partida cuadra exactamente al centavo.")
