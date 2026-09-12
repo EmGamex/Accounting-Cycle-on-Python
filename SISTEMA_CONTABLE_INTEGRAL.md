@@ -2,7 +2,7 @@
 ## Especificación de Arquitectura, Flujo de Datos y Modelo de Negocio
 **País / Marco Normativo:** Guatemala (Código de Comercio, SAT, IGSS, NIIF para PYMES)  
 **Moneda Oficial:** Quetzales (Q)  
-**Tecnología Base:** Python 3.10+, Dataclasses fuertemente tipadas, Precisión decimal (`Decimal`), OpenPyXL
+**Tecnología Base:** Python 3.10+, Dataclasses fuertemente tipadas, Precisión decimal (`Decimal`), OpenPyXL, Rich (CLI / Portabilidad Termux)
 
 ---
 
@@ -299,7 +299,31 @@ flowchart LR
 
 ---
 
-## 6. Hoja de Ruta de Implementación
+## 6. Especificación de Interfaz de Terminal y Portabilidad (Termux / Android / Cross-Platform)
+
+Para asegurar una presentación financiera legible, profesional y adaptativa tanto en estaciones de trabajo (Windows/Linux/macOS) como en entornos móviles de campo (**Termux en Android**), el sistema adopta la librería **`rich`** como estándar de visualización en consola.
+
+### 6.1. Justificación Técnica y Ventajas para el Ciclo Contable
+* **100% Python Puro (Zero-C Dependencies):** A diferencia de herramientas que requieren compiladores de C/C++ o Rust (habitual causa de errores al instalar paquetes en Termux por falta de entorno clang/NDK), `rich` y sus dependencias (`pygments`, `markdown-it-py`) son código Python puro instalable directamente con `pip install rich`.
+* **Presentación Estructurada de Libros Contables:**
+  * **Tablas Financieras (`rich.table.Table`):** Alineación decimal estricta a la derecha para montos monetarios (Debe / Haber), bordes definidos y encabezados contrastados.
+  * **Estados y Alertas Visuales:** Resaltado cromático inmediato para validaciones (p. ej., `[bold green][CUADRADO][/bold green]` frente a `[bold red][DESCUADRADO][/bold red]`).
+  * **Visualización del Catálogo Contable (`rich.tree.Tree`):** Despliegue jerárquico del catálogo de cuentas (Clase → Grupo → Cuenta → Subcuenta) en formato de árbol navegable.
+  * **Estructuración Limpia:** Reemplazo de cadenas de ancho fijo (`"=" * 70`) por paneles semánticos (`rich.panel.Panel`) y separadores adaptativos (`rich.rule.Rule`).
+
+### 6.2. Directrices de Diseño y Ergonomía para Termux (Móviles)
+1. **Ancho Responsivo Dinámico (`console.width`):**  
+   En dispositivos móviles bajo Termux, la pantalla suele variar entre 40 y 80 columnas según el tamaño de fuente y orientación. Las vistas deben adaptarse automáticamente al ancho real de la consola mediante `rich`, eliminando constantes rígidas que provoquen saltos de línea antiestéticos.
+2. **Bordes y Padding Compactos:**  
+   Uso preferente de estilos de caja compactos (`box.ROUNDED` o `box.SIMPLE`) y espaciado mínimo de celdas (`padding=(0, 1)`) para optimizar el área horizontal útil en pantallas pequeñas.
+3. **Ergonomía de Entrada de Datos (Evitar TUI de pantalla completa):**  
+   Se descartan interfaces TUI invasivas a pantalla completa (como `curses` o `textual`), ya que el teclado virtual táctil de Android oculta el 50% de la pantalla y genera problemas de redibujado. Se mantiene el flujo interactivo basado en prompts numéricos y respuestas cortas (`input()` o `rich.prompt.Prompt`), ideales para teclado móvil.
+4. **Desacoplamiento Arquitectónico:**  
+   La lógica de negocio y motores contables (`diario/`, `mayor/`, `balance/`) permanecen completamente independientes de la interfaz; las capas CLI (`cli.py`, `orquestador.py`) consumen los modelos para renderizarlos.
+
+---
+
+## 7. Hoja de Ruta de Implementación
 
 ```mermaid
 flowchart LR
@@ -307,7 +331,7 @@ flowchart LR
     F2["<b>Fase 2: Libro Diario</b><br/>[COMPLETADA]<br/>• diario/<br/>• Conectores Pda #1 y Nómina<br/>• Validación Doble Columna"]
     F3["<b>Fase 3: Mayor y Balance</b><br/>[EN PROGRESO]<br/>• mayor/ (T-Gráficas) [OK]<br/>• balance/ (4 Columnas)"]
     F4["<b>Fase 4: Excel Maestro</b><br/>[PENDIENTE]<br/>• exportadores/ openpyxl<br/>• Libro_Contable_Master.xlsx"]
-    F5["<b>Fase 5: CLI Unificada</b><br/>[COMPLETADA]<br/>• main.py interactivo<br/>• Pipeline desatendido"]
+    F5["<b>Fase 5: CLI Unificada y Rich UI</b><br/>[EN PROGRESO]<br/>• main.py interactivo [OK]<br/>• Integración Rich / Termux"]
 
     F1 ==> F2 ==> F3 ==> F4 ==> F5
 
@@ -315,7 +339,7 @@ flowchart LR
     style F2 fill:#2e7d32,stroke:#1b5e20,color:#ffffff
     style F3 fill:#f57c00,stroke:#e65100,color:#ffffff
     style F4 fill:#37474f,stroke:#263238,color:#ffffff
-    style F5 fill:#2e7d32,stroke:#1b5e20,color:#ffffff
+    style F5 fill:#f57c00,stroke:#e65100,color:#ffffff
 ```
 
 * **Fase 1 (Completada):**
@@ -331,5 +355,6 @@ flowchart LR
   - [ ] Crear el módulo `balance/` que tome el Mayor y produzca la matriz de 4 Columnas.
 * **Fase 4:**
   - [ ] Implementar los exportadores a Excel (`openpyxl`) para generar el libro maestro de 6 hojas listo para impresión y entrega legal.
-* **Fase 5:**
-  - [x] Menú de consola amigable e interactivo (`main.py`) que permita operar todo el flujo con 1 solo comando.
+* **Fase 5 (En Progreso):**
+  - [x] Menú de consola amigable e interactivo (`main.py` y `orquestador.py`) que permita operar todo el flujo con 1 solo comando.
+  - [ ] Integración de `rich` para tablas contables con auto-ajuste responsivo, árbol del catálogo y optimización para Termux.
