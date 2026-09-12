@@ -1,12 +1,12 @@
 """Capa de presentación e interacción de consola para el sistema de apertura contable."""
 from decimal import Decimal, InvalidOperation
-import sys
 from typing import Optional, Tuple
 
 from apertura.catalogo import CatalogoService
 from apertura.contabilidad import MotorApertura
 from apertura.models import CuentaCatalogo, PartidaApertura, ResumenBalance
-from reportes import exportar_reporte, generar_texto_balance, generar_texto_partida, imprimir_partida_rich
+from config import ARCHIVO_APERTURA_DEFAULT, RESPUESTAS_AFIRMATIVAS
+from reportes import exportar_reporte, generar_texto_balance, imprimir_partida_rich
 from ui import (
     console,
     formatear_moneda,
@@ -19,6 +19,14 @@ from ui import (
     imprimir_menu_clasificacion,
     imprimir_resumen_balance_apertura,
 )
+
+
+def pedir_confirmacion(mensaje: str, default: bool = False) -> bool:
+    """Solicita una confirmación sí/no estandarizada al usuario."""
+    resp = input(mensaje).strip().lower()
+    if not resp:
+        return default
+    return resp in RESPUESTAS_AFIRMATIVAS
 
 
 def pedir_monto(cuenta_nombre: str) -> Decimal:
@@ -79,17 +87,91 @@ def seleccionar_cuenta_interactiva(catalogo: CatalogoService, entrada: str) -> O
         imprimir_alerta(f"Ingrese un número entre 1 y {limite}.")
 
 
+def resolver_cuenta(catalogo: CatalogoService, entrada: str) -> Optional[CuentaCatalogo]:
+    """Resuelve una cuenta vía catálogo interactivo o mediante clasificación manual."""
+    cuenta = seleccionar_cuenta_interactiva(catalogo, entrada)
+    if cuenta:
+        console.print(f"   Ubicación   : [dim]{cuenta.clase} -> {cuenta.subgrupo}[/dim]")
+        return cuenta
+
+    pregunta = f"   [!] No se seleccionó cuenta para '{entrada}'. ¿Deseas clasificarla manualmente? (s/n): "
+    if pedir_confirmacion(pregunta):
+        opcion = pedir_clasificacion_manual(entrada)
+        return catalogo.crear_cuenta_manual(entrada, opcion)
+
+    return None
+
+
+def procesar_comando_especial(comando: str, motor: MotorApertura) -> bool:
+    """Ejecuta comandos auxiliares de control ('ver', 'eliminar'). Retorna True si fue reconocido."""
+    cmd = comando.lower()
+    if cmd in ("ver", "listar"):
+        mostrar_cuentas_registradas(motor)
+        return True
+
+    if cmd in ("eliminar", "borrar", "quitar"):
+        target = input("   Nombre o código de la cuenta a eliminar: ").strip()
+        if motor.eliminar(target):
+            imprimir_exito(f"Cuenta '{target}' eliminada.")
+        else:
+            imprimir_alerta(f"No se encontró la cuenta '{target}'.")
+        return True
+
+    return False
+
+
+def mostrar_guia_comandos() -> None:
+    """Muestra el encabezado y comandos especiales del flujo de apertura."""
+    imprimir_banner("SISTEMA DE APERTURA CONTABLE: BALANCE Y PARTIDA DE DIARIO", border_style="cyan")
+    console.print("Ingresa el código o nombre de cada cuenta. [bold]Comandos especiales:[/bold]")
+    console.print("  [cyan]'ver'[/cyan]      : Listar cuentas acumuladas")
+    console.print("  [cyan]'eliminar'[/cyan] : Quitar una cuenta")
+    console.print("  [cyan]'fin'[/cyan]      : Finalizar y generar Balance y Partida\n")
+
+
+def ajustar_capital_si_procede(motor: MotorApertura, catalogo: CatalogoService, resumen: ResumenBalance) -> ResumenBalance:
+    """Evalúa la diferencia de capital del balance y permite asignarla automáticamente."""
+    if resumen.diferencia_capital == Decimal("0.00"):
+        return resumen
+
+    imprimir_resumen_balance_apertura(resumen)
+
+    if resumen.diferencia_capital > Decimal("0.00"):
+        console.print(f"  Capital residual necesario para cuadrar: [bold yellow]{formatear_moneda(resumen.diferencia_capital)}[/bold yellow]")
+        if pedir_confirmacion("¿Deseas asignar esta diferencia a la cuenta de Capital? (s/n): "):
+            cta_cap = catalogo.obtener_cuenta_capital()
+            motor.asignar_diferencia_capital(cta_cap, resumen.diferencia_capital)
+            console.print(
+                f"   [green]->[/green] Asignado [bold green]{formatear_moneda(resumen.diferencia_capital)}[/bold green] "
+                f"a [[cyan]{cta_cap.codigo}[/cyan]] {cta_cap.nombre}."
+            )
+            return motor.calcular_balance()
+    else:
+        imprimir_aviso(
+            f"El Pasivo y Patrimonio superan al Activo por {formatear_moneda(abs(resumen.diferencia_capital))}. "
+            "Revisa los saldos ingresados; no se asignará capital negativo automático."
+        )
+
+    return resumen
+
+
+def exportar_reportes_si_solicitado(resumen: ResumenBalance, partida: PartidaApertura) -> None:
+    """Pregunta al usuario si desea persistir los reportes generados a un archivo de texto."""
+    if not pedir_confirmacion("¿Deseas guardar estos reportes en un archivo de texto? (s/n) [n]: ", default=False):
+        return
+
+    nombre_arch = input(f"Nombre de archivo [{ARCHIVO_APERTURA_DEFAULT}]: ").strip() or ARCHIVO_APERTURA_DEFAULT
+    ruta_completa = exportar_reporte(resumen, partida, nombre_arch)
+    imprimir_exito(f"Reporte exportado exitosamente en:\n        {ruta_completa}\n")
+
+
 def iniciar_flujo_apertura(
     numero_partida: int = 1,
     exportar_archivo: bool = True,
     imprimir_reportes: bool = True,
 ) -> Tuple[Optional[ResumenBalance], Optional[PartidaApertura]]:
     """Punto de entrada interactivo principal. Retorna (ResumenBalance, PartidaApertura) o (None, None)."""
-    imprimir_banner("SISTEMA DE APERTURA CONTABLE: BALANCE Y PARTIDA DE DIARIO", border_style="cyan")
-    console.print("Ingresa el código o nombre de cada cuenta. [bold]Comandos especiales:[/bold]")
-    console.print("  [cyan]'ver'[/cyan]      : Listar cuentas acumuladas")
-    console.print("  [cyan]'eliminar'[/cyan] : Quitar una cuenta")
-    console.print("  [cyan]'fin'[/cyan]      : Finalizar y generar Balance y Partida\n")
+    mostrar_guia_comandos()
 
     try:
         catalogo = CatalogoService.desde_modulo()
@@ -103,31 +185,14 @@ def iniciar_flujo_apertura(
         entrada = input("\nCuenta, código o comando (o 'fin'): ").strip()
         if not entrada:
             continue
-
-        cmd = entrada.lower()
-        if cmd == "fin":
+        if entrada.lower() == "fin":
             break
-        elif cmd in ("ver", "listar"):
-            mostrar_cuentas_registradas(motor)
-            continue
-        elif cmd in ("eliminar", "borrar", "quitar"):
-            target = input("   Nombre o código de la cuenta a eliminar: ").strip()
-            if motor.eliminar(target):
-                imprimir_exito(f"Cuenta '{target}' eliminada.")
-            else:
-                imprimir_alerta(f"No se encontró la cuenta '{target}'.")
+        if procesar_comando_especial(entrada, motor):
             continue
 
-        cuenta_info = seleccionar_cuenta_interactiva(catalogo, entrada)
+        cuenta_info = resolver_cuenta(catalogo, entrada)
         if not cuenta_info:
-            resp = input(f"   [!] No se seleccionó cuenta para '{entrada}'. ¿Deseas clasificarla manualmente? (s/n): ").strip().lower()
-            if resp in ("s", "si", "y", "yes"):
-                opcion = pedir_clasificacion_manual(entrada)
-                cuenta_info = catalogo.crear_cuenta_manual(entrada, opcion)
-            else:
-                continue
-        else:
-            console.print(f"   Ubicación   : [dim]{cuenta_info.clase} -> {cuenta_info.subgrupo}[/dim]")
+            continue
 
         monto = pedir_monto(cuenta_info.nombre)
         registrada = motor.agregar_o_acumular(cuenta_info, monto)
@@ -137,39 +202,14 @@ def iniciar_flujo_apertura(
         imprimir_aviso("No se registraron cuentas. Saliendo del programa.")
         return None, None
 
-    resumen = motor.calcular_balance()
-
-    if resumen.diferencia_capital != Decimal("0.00"):
-        imprimir_resumen_balance_apertura(resumen)
-
-        if resumen.diferencia_capital > Decimal("0.00"):
-            console.print(f"  Capital residual necesario para cuadrar: [bold yellow]{formatear_moneda(resumen.diferencia_capital)}[/bold yellow]")
-            ajustar = input("¿Deseas asignar esta diferencia a la cuenta de Capital? (s/n): ").strip().lower()
-
-            if ajustar in ("s", "si", "y", "yes"):
-                cta_cap = catalogo.obtener_cuenta_capital()
-                motor.asignar_diferencia_capital(cta_cap, resumen.diferencia_capital)
-                console.print(f"   [green]->[/green] Asignado [bold green]{formatear_moneda(resumen.diferencia_capital)}[/bold green] a [[cyan]{cta_cap.codigo}[/cyan]] {cta_cap.nombre}.")
-                resumen = motor.calcular_balance()
-        else:
-            imprimir_aviso(
-                f"El Pasivo y Patrimonio superan al Activo por {formatear_moneda(abs(resumen.diferencia_capital))}. "
-                "Revisa los saldos ingresados; no se asignará capital negativo automático."
-            )
-
-    # Generar reportes
+    resumen = ajustar_capital_si_procede(motor, catalogo, motor.calcular_balance())
     partida = motor.generar_partida_apertura(numero=numero_partida)
 
     if imprimir_reportes:
         console.print("\n" + generar_texto_balance(resumen))
         imprimir_partida_rich(partida)
 
-    # Preguntar si se desea exportar a archivo si está habilitado
     if exportar_archivo:
-        exportar = input("¿Deseas guardar estos reportes en un archivo de texto? (s/n) [n]: ").strip().lower()
-        if exportar in ("s", "si", "y", "yes"):
-            nombre_arch = input("Nombre de archivo [apertura_contable.txt]: ").strip() or "apertura_contable.txt"
-            ruta_completa = exportar_reporte(resumen, partida, nombre_arch)
-            imprimir_exito(f"Reporte exportado exitosamente en:\n        {ruta_completa}\n")
+        exportar_reportes_si_solicitado(resumen, partida)
 
     return resumen, partida
