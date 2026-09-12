@@ -89,3 +89,65 @@ def generar_texto_partida(
     lineas_salida.append(f"{'':<53} {'='*12} {'='*14}")
 
     return "\n".join(lineas_salida)
+
+
+def generar_tabla_partida_rich(
+    partida: Any,
+    titulo_personalizado: Optional[str] = None,
+):
+    """Genera una tabla estilizada con Rich para una partida contable a doble columna."""
+    from rich import box
+    from rich.table import Table
+
+    fecha_obj = getattr(partida, "fecha", None)
+    if titulo_personalizado:
+        titulo = titulo_personalizado
+    elif fecha_obj and hasattr(fecha_obj, "strftime"):
+        titulo = f"Partida No. {partida.numero} ({fecha_obj.strftime('%d/%m/%Y')})"
+    else:
+        titulo = f"Partida No. {partida.numero}"
+
+    tabla = Table(title=titulo, box=box.ROUNDED, expand=False, show_footer=True)
+    tabla.add_column("Código", style="dim cyan", no_wrap=True)
+    tabla.add_column("Cuenta / Concepto", style="white")
+    tabla.add_column("Debe (Q)", justify="right", style="bold green", footer_style="bold green", no_wrap=True)
+    tabla.add_column("Haber (Q)", justify="right", style="bold green", footer_style="bold green", no_wrap=True)
+
+    for linea in partida.lineas:
+        es_cargo = getattr(linea, "es_cargo", None)
+        if es_cargo is None:
+            es_cargo = linea.debe > Decimal("0.00")
+
+        if es_cargo:
+            monto_d = f"Q{linea.debe:,.2f}"
+            tabla.add_row(str(linea.codigo), linea.nombre, monto_d, "")
+        else:
+            monto_h = f"Q{linea.haber:,.2f}"
+            tabla.add_row(str(linea.codigo), f"  a: {linea.nombre}", "", monto_h)
+
+    glosa = getattr(partida, "glosa", None) or getattr(partida, "descripcion", "")
+    doc_soporte = getattr(partida, "documento_soporte", None)
+    glosa_txt = f"[dim italic]{glosa}[/dim italic]"
+    if doc_soporte:
+        glosa_txt += f" [dim][Doc: {doc_soporte}][/dim]"
+
+    tabla.add_row("", glosa_txt, "", "")
+
+    cuadra = partida.total_debe == partida.total_haber
+    estilo_pie = "bold green" if cuadra else "bold red"
+    tabla.columns[1].footer = f"[{estilo_pie}]SUMAS IGUALES[/{estilo_pie}]"
+    tabla.columns[2].footer = f"[{estilo_pie}]Q{partida.total_debe:,.2f}[/{estilo_pie}]"
+    tabla.columns[3].footer = f"[{estilo_pie}]Q{partida.total_haber:,.2f}[/{estilo_pie}]"
+
+    return tabla
+
+
+def imprimir_partida_rich(partida: Any, console_obj=None, titulo_personalizado: Optional[str] = None) -> None:
+    """Imprime en consola una partida contable con Rich."""
+    try:
+        from ui import console
+        c = console_obj or console
+        tabla = generar_tabla_partida_rich(partida, titulo_personalizado=titulo_personalizado)
+        c.print(tabla)
+    except ImportError:
+        print(generar_texto_partida(partida, titulo_personalizado=titulo_personalizado))

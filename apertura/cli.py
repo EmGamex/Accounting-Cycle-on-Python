@@ -6,7 +6,8 @@ from typing import Optional, Tuple
 from apertura.catalogo import CatalogoService
 from apertura.contabilidad import MotorApertura
 from apertura.models import CuentaCatalogo, PartidaApertura, ResumenBalance
-from reportes import exportar_reporte, generar_texto_balance, generar_texto_partida
+from reportes import exportar_reporte, generar_texto_balance, generar_texto_partida, imprimir_partida_rich
+from ui import console, imprimir_alerta, imprimir_aviso, imprimir_banner, imprimir_exito
 
 
 def pedir_monto(cuenta_nombre: str) -> Decimal:
@@ -25,7 +26,7 @@ def pedir_monto(cuenta_nombre: str) -> Decimal:
 
 def pedir_clasificacion_manual(nombre: str) -> str:
     """Solicita al usuario clasificar manualmente una cuenta no hallada en catálogo."""
-    print(f"\n   [!] '{nombre}' no se encontró en el catálogo.")
+    console.print(f"\n   [bold yellow][!][/bold yellow] '{nombre}' no se encontró en el catálogo.")
     print("   Clasifícala:")
     print("   1. Activo Corriente     | 2. Activo No Corriente")
     print("   3. Pasivo Corriente    | 4. Pasivo No Corriente")
@@ -34,20 +35,26 @@ def pedir_clasificacion_manual(nombre: str) -> str:
 
 
 def mostrar_cuentas_registradas(motor: MotorApertura) -> None:
-    """Imprime en consola las cuentas registradas hasta el momento."""
+    """Imprime en consola las cuentas registradas hasta el momento con tabla Rich."""
     items = motor.items
     if not items:
-        print("\n   [!] No hay cuentas registradas aún.")
+        imprimir_alerta("No hay cuentas registradas aún.")
         return
 
-    print("\n   " + "-" * 65)
-    print("   CUENTAS REGISTRADAS ACTUALMENTE:")
-    print(f"   {'CÓDIGO':<8} {'NOMBRE':<35} {'TIPO':<10} {'MONTO (Q)':>12}")
-    print("   " + "-" * 65)
+    from rich import box
+    from rich.table import Table
+
+    tabla = Table(title="Cuentas Registradas Actualmente", box=box.ROUNDED)
+    tabla.add_column("Código", style="dim cyan")
+    tabla.add_column("Nombre", style="white")
+    tabla.add_column("Tipo", style="yellow")
+    tabla.add_column("Monto (Q)", justify="right", style="bold green")
+
     for cta in items:
         tipo = "(-)" if cta.es_regularizadora else "Normal"
-        print(f"   {cta.codigo:<8} {cta.nombre:<35} {tipo:<10} {cta.monto:>12,.2f}")
-    print("   " + "-" * 65)
+        tabla.add_row(cta.codigo, cta.nombre, tipo, f"Q{cta.monto:,.2f}")
+
+    console.print(tabla)
 
 
 def seleccionar_cuenta_interactiva(catalogo: CatalogoService, entrada: str) -> Optional[CuentaCatalogo]:
@@ -86,18 +93,16 @@ def iniciar_flujo_apertura(
     imprimir_reportes: bool = True,
 ) -> Tuple[Optional[ResumenBalance], Optional[PartidaApertura]]:
     """Punto de entrada interactivo principal. Retorna (ResumenBalance, PartidaApertura) o (None, None)."""
-    print("=" * 75)
-    print("      SISTEMA DE APERTURA CONTABLE: BALANCE Y PARTIDA DE DIARIO")
-    print("=" * 75)
-    print("Ingresa el código o nombre de cada cuenta. Comandos especiales:")
-    print("  'ver'      : Listar cuentas acumuladas")
-    print("  'eliminar' : Quitar una cuenta")
-    print("  'fin'      : Finalizar y generar Balance y Partida\n")
+    imprimir_banner("SISTEMA DE APERTURA CONTABLE: BALANCE Y PARTIDA DE DIARIO", border_style="cyan")
+    console.print("Ingresa el código o nombre de cada cuenta. [bold]Comandos especiales:[/bold]")
+    console.print("  [cyan]'ver'[/cyan]      : Listar cuentas acumuladas")
+    console.print("  [cyan]'eliminar'[/cyan] : Quitar una cuenta")
+    console.print("  [cyan]'fin'[/cyan]      : Finalizar y generar Balance y Partida\n")
 
     try:
         catalogo = CatalogoService.desde_modulo()
     except RuntimeError as e:
-        print(f"\n[ERROR] {e}")
+        imprimir_alerta(f"{e}")
         return None, None
 
     motor = MotorApertura()
@@ -116,9 +121,9 @@ def iniciar_flujo_apertura(
         elif cmd in ("eliminar", "borrar", "quitar"):
             target = input("   Nombre o código de la cuenta a eliminar: ").strip()
             if motor.eliminar(target):
-                print(f"   [OK] Cuenta '{target}' eliminada.")
+                imprimir_exito(f"Cuenta '{target}' eliminada.")
             else:
-                print(f"   [!] No se encontró la cuenta '{target}'.")
+                imprimir_alerta(f"No se encontró la cuenta '{target}'.")
             continue
 
         # Búsqueda interactiva en catálogo
@@ -135,7 +140,7 @@ def iniciar_flujo_apertura(
 
         monto = pedir_monto(cuenta_info.nombre)
         registrada = motor.agregar_o_acumular(cuenta_info, monto)
-        print(f"   Registrado: Q {registrada.monto:,.2f} en '{registrada.nombre}' ({registrada.subgrupo}).")
+        imprimir_exito(f"Registrado: Q{registrada.monto:,.2f} en '{registrada.nombre}' ({registrada.subgrupo}).")
 
     if not motor.items:
         print("\nNo se registraron cuentas. Saliendo del programa.")
@@ -173,7 +178,7 @@ def iniciar_flujo_apertura(
 
     if imprimir_reportes:
         print("\n" + generar_texto_balance(resumen))
-        print(generar_texto_partida(partida))
+        imprimir_partida_rich(partida)
 
     # Preguntar si se desea exportar a archivo si está habilitado
     if exportar_archivo:
@@ -181,6 +186,6 @@ def iniciar_flujo_apertura(
         if exportar in ("s", "si", "y", "yes"):
             nombre_arch = input("Nombre de archivo [apertura_contable.txt]: ").strip() or "apertura_contable.txt"
             ruta_completa = exportar_reporte(resumen, partida, nombre_arch)
-            print(f"   [OK] Reporte exportado exitosamente en:\n        {ruta_completa}\n")
+            imprimir_exito(f"Reporte exportado exitosamente en:\n        {ruta_completa}\n")
 
     return resumen, partida

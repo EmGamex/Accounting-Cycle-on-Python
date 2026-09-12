@@ -8,14 +8,21 @@ from diario.cli import iniciar_flujo_diario
 from diario.conectores import de_partida_apertura, de_partida_planilla
 from diario.engine import GestorLibroDiario
 from mayor.cli import iniciar_flujo_mayor
+from ui import (
+    console,
+    formatear_moneda,
+    imprimir_alerta,
+    imprimir_aviso,
+    imprimir_banner,
+    imprimir_estado_ejercicio as ui_imprimir_estado_ejercicio,
+    imprimir_exito,
+)
 
 # Constantes de configuración y presentación
 ARCHIVO_EJERCICIO_DEFAULT = "libro_diario.json"
-ANCHO_ENCABEZADO = 72
-ANCHO_SUBMENU = 55
 RESPUESTAS_AFIRMATIVAS = ("s", "si", "y", "yes", "")
 OPCION_SALIR = "0"
-MENSAJE_ALERTA_OPCION = "  (!) Opción no reconocida. Intente nuevamente."
+MENSAJE_ALERTA_OPCION = "Opción no reconocida. Intente nuevamente."
 
 
 class AccionMenu(NamedTuple):
@@ -27,8 +34,8 @@ class AccionMenu(NamedTuple):
 def _mostrar_opciones_con_indices(acciones: list[AccionMenu], texto_salir: str = "Volver / Salir") -> None:
     """Imprime una lista de acciones numeradas secuencialmente y la opción de salida."""
     for idx, item in enumerate(acciones, start=1):
-        print(f"  [{idx}] {item.descripcion}")
-    print(f"  [{OPCION_SALIR}] {texto_salir}")
+        console.print(f"  [bold cyan][{idx}][/bold cyan] {item.descripcion}")
+    console.print(f"  [bold dim][{OPCION_SALIR}][/bold dim] {texto_salir}")
 
 
 # ==============================================================================
@@ -47,22 +54,22 @@ def pedir_confirmacion(mensaje: str, default: bool = True) -> bool:
 def asentar_partida_en_diario(gestor: GestorLibroDiario, partida_diario, tipo_nombre: str) -> None:
     """Registra una partida externa en el libro diario con número correlativo."""
     gestor.registrar_partida(partida_diario, auto_correlativo=True)
-    print(f"  [OK] Partida #{partida_diario.numero} de {tipo_nombre} asentada en el Libro Diario.")
+    imprimir_exito(f"Partida #{partida_diario.numero} de {tipo_nombre} asentada en el Libro Diario.")
 
 
 def _guardar_ejercicio(gestor: GestorLibroDiario, ruta: str) -> None:
     """Guarda las partidas del gestor en el archivo JSON especificado."""
     gestor.guardar_json(ruta)
-    print(f"  [OK] Ejercicio guardado exitosamente ({len(gestor.libro.partidas)} partidas).")
+    imprimir_exito(f"Ejercicio guardado exitosamente ({len(gestor.libro.partidas)} partidas).")
 
 
 def _cargar_ejercicio(gestor: GestorLibroDiario, ruta: str) -> None:
     """Carga las partidas desde el archivo JSON si existe."""
     if os.path.exists(ruta):
         gestor.cargar_json(ruta)
-        print(f"  [OK] Ejercicio cargado exitosamente ({len(gestor.libro.partidas)} partidas activas).")
+        imprimir_exito(f"Ejercicio cargado exitosamente ({len(gestor.libro.partidas)} partidas activas).")
     else:
-        print(f"  (!) No se encontró el archivo '{ruta}'.")
+        imprimir_alerta(f"No se encontró el archivo '{ruta}'.")
 
 
 def _guardar_personalizado(gestor: GestorLibroDiario) -> None:
@@ -70,7 +77,7 @@ def _guardar_personalizado(gestor: GestorLibroDiario) -> None:
     ruta = input("Ruta o nombre del archivo JSON de destino: ").strip()
     if ruta:
         gestor.guardar_json(ruta)
-        print(f"  [OK] Ejercicio guardado exitosamente en '{ruta}'.")
+        imprimir_exito(f"Ejercicio guardado exitosamente en '{ruta}'.")
 
 
 def _cargar_personalizado(gestor: GestorLibroDiario) -> None:
@@ -108,9 +115,7 @@ def _obtener_acciones_persistencia(gestor: GestorLibroDiario) -> list[AccionMenu
 
 def menu_persistencia(gestor: GestorLibroDiario) -> None:
     """Submenú para guardar o cargar el ejercicio contable en formato JSON."""
-    print("\n" + "-" * ANCHO_SUBMENU)
-    print("      GESTIÓN Y PERSISTENCIA DEL EJERCICIO (JSON)")
-    print("-" * ANCHO_SUBMENU)
+    imprimir_banner("GESTIÓN Y PERSISTENCIA DEL EJERCICIO (JSON)", border_style="blue")
 
     acciones = _obtener_acciones_persistencia(gestor)
     _mostrar_opciones_con_indices(acciones, texto_salir="Volver al menú principal")
@@ -152,28 +157,22 @@ def _accion_salir(gestor: GestorLibroDiario) -> None:
         if pedir_confirmacion(pregunta):
             try:
                 gestor.guardar_json(ARCHIVO_EJERCICIO_DEFAULT)
-                print(f"  [OK] Ejercicio guardado exitosamente en '{ARCHIVO_EJERCICIO_DEFAULT}'.")
+                imprimir_exito(f"Ejercicio guardado exitosamente en '{ARCHIVO_EJERCICIO_DEFAULT}'.")
             except Exception as e:
-                print(f"  (!) Error al guardar ejercicio: {e}")
-    print("\n¡Gracias por utilizar el Sistema Contable Integral! Hasta pronto.")
+                imprimir_alerta(f"Error al guardar ejercicio: {e}")
+    console.print("\n[bold green]¡Gracias por utilizar el Sistema Contable Integral! Hasta pronto.[/bold green]")
 
 
 def _imprimir_banner_principal() -> None:
     """Imprime el banner del menú principal del sistema."""
-    separador = "=" * ANCHO_ENCABEZADO
-    print(separador)
-    print("             SISTEMA CONTABLE INTEGRAL (GUATEMALA)")
-    print(separador)
+    imprimir_banner("SISTEMA CONTABLE INTEGRAL (GUATEMALA)")
 
 
 def _imprimir_estado_ejercicio(gestor: GestorLibroDiario) -> None:
     """Muestra el balance y cuadre actual del libro diario."""
     total_d, total_h = gestor.totales()
-    cuadra_str = "CUADRADO" if gestor.libro.cuadra or not gestor.libro.partidas else "DESCUADRADO"
-    print(
-        f"\nEstado del Ejercicio: {len(gestor.libro.partidas)} partida(s) en Diario | "
-        f"Debe: Q{total_d:,.2f} | Haber: Q{total_h:,.2f} [{cuadra_str}]"
-    )
+    cuadra = gestor.libro.cuadra or not gestor.libro.partidas
+    ui_imprimir_estado_ejercicio(len(gestor.libro.partidas), total_d, total_h, cuadra)
 
 
 def _obtener_acciones_principales(gestor: GestorLibroDiario) -> list[AccionMenu]:
@@ -236,6 +235,6 @@ def menu_principal(gestor: Optional[GestorLibroDiario] = None) -> None:
             try:
                 acciones[int(opcion) - 1].accion()
             except KeyboardInterrupt:
-                print("\n  [!] Retornando al menú principal...")
+                imprimir_aviso("Retornando al menú principal...")
         else:
-            print(MENSAJE_ALERTA_OPCION)
+            imprimir_alerta(MENSAJE_ALERTA_OPCION)
