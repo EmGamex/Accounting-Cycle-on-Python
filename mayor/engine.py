@@ -1,4 +1,5 @@
-﻿"""Motor de agrupación, pase automático y validación del Libro Mayor."""
+"""Motor de agrupación, pase automático y validación del Libro Mayor."""
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import catalogo_contable
@@ -35,7 +36,7 @@ def mayorizar_libro_diario(
         raise LibroDiarioVacioError("No se puede mayorizar: el Libro Diario no tiene partidas registradas.")
 
     cuadra_diario = getattr(libro_diario, "cuadra", True)
-    diferencia_diario = getattr(libro_diario, "diferencia", Decimal("0.00") if "Decimal" in globals() else 0)
+    diferencia_diario = getattr(libro_diario, "diferencia", Decimal("0.00"))
 
     if validar_cuadre_diario and not cuadra_diario:
         raise DescuadreMayorError(
@@ -43,7 +44,7 @@ def mayorizar_libro_diario(
             "Corrija los asientos antes de realizar el pase al Mayor."
         )
 
-    # Cache de nombres de cuentas oficiales del catálogo
+    # Índice O(1) con nomenclatura oficial NIIF/SAT para normalizar nombres
     nombres_catalogo: Dict[str, str] = {
         cod.strip(): nom.strip()
         for _, _, cod, nom in catalogo_contable.listar_cuentas()
@@ -54,8 +55,9 @@ def mayorizar_libro_diario(
     for partida in partidas:
         for linea in partida.lineas:
             cod = linea.codigo.strip()
-            # Nombre oficial del catálogo si existe, o el asignado en la línea
-            nombre = nombres_catalogo.get(cod, linea.nombre.strip())
+            # Prioriza la denominación central del catálogo NIIF/SAT; mantiene la de la partida si es auxiliar
+            nombre_linea = linea.nombre.strip() if getattr(linea, "nombre", None) else cod
+            nombre = nombres_catalogo.get(cod) or nombre_linea or cod
 
             if cod not in cuentas_dict:
                 cuentas_dict[cod] = CuentaMayor(codigo=cod, nombre=nombre)
@@ -72,7 +74,7 @@ def mayorizar_libro_diario(
 
     libro_mayor = LibroMayor(cuentas=cuentas_dict)
 
-    # Validaciones matemáticas de integridad
+    # Verificación de partida doble: sumas iguales al Diario y balance de saldos deudores vs acreedores
     total_debe_diario = libro_diario.total_debe
     total_haber_diario = libro_diario.total_haber
 

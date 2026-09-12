@@ -1,4 +1,4 @@
-﻿"""Modelos de datos fuertemente tipados para el Libro Mayor y T-Gráficas."""
+"""Modelos de datos fuertemente tipados para el Libro Mayor y T-Gráficas."""
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
@@ -118,12 +118,16 @@ class CuentaMayor:
     def naturaleza_esperada(self) -> NaturalezaSaldo:
         """Infiere la naturaleza esperada según el código contable guatemalteco."""
         cod = self.codigo.strip()
+        # Regularizadoras de activo (ej. depreciaciones acumuladas 1205, amortizaciones 1210, cuentas incobrables -R)
         if "-R" in cod or cod.startswith("1205") or cod.startswith("1210"):
             return NaturalezaSaldo.ACREEDOR
+        # Excepciones deudoras en ingresos o capital (4103 Devoluciones sobre ventas, 3104 Pérdidas acumuladas)
         if cod.startswith("4103") or cod.startswith("3104"):
             return NaturalezaSaldo.DEUDOR
+        # Clases 1 (Activo) y 5 (Costos y Gastos) operan por defecto con saldo deudor
         if cod.startswith("1") or cod.startswith("5"):
             return NaturalezaSaldo.DEUDOR
+        # Clases 2 (Pasivo), 3 (Patrimonio) y 4 (Ingresos) operan por defecto con saldo acreedor
         return NaturalezaSaldo.ACREEDOR
 
     @property

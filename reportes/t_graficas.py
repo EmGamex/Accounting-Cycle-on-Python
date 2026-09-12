@@ -1,4 +1,4 @@
-﻿"""Módulo de renderizado de T-Gráficas contables en texto plano / ASCII."""
+"""Módulo de renderizado de T-Gráficas contables en texto plano / ASCII."""
 from itertools import zip_longest
 from typing import List, Optional
 
@@ -30,16 +30,13 @@ def generar_texto_t_grafica(cuenta: CuentaMayor, ancho_col: int = 26) -> str:
     titulo = f"[{cuenta.codigo}] {cuenta.nombre}"
     lineas.append(centrar_titulo(titulo, ancho_total))
 
-    # Encabezado de columnas
     tit_debe = "DEBE (Cargos)".center(ancho_col)
     tit_haber = "HABER (Abonos)".center(ancho_col)
     lineas.append(f"{tit_debe}│{tit_haber}")
 
-    # Barra superior de la T
     barra_horizontal = ("─" * ancho_col) + "┼" + ("─" * ancho_col)
     lineas.append(barra_horizontal)
 
-    # Detalle de movimientos emparejados fila a fila
     cargos = cuenta.cargos
     abonos = cuenta.abonos
 
@@ -49,17 +46,14 @@ def generar_texto_t_grafica(cuenta: CuentaMayor, ancho_col: int = 26) -> str:
         lineas.append(f"{vacio_debe}│{vacio_haber}")
     else:
         for c, a in zip_longest(cargos, abonos):
-            # Formato Debe
             if c is not None:
                 ref_c = f"Pda #{c.numero_partida:<3}"
                 monto_c = formato_moneda(c.debe)
-                # Espaciado interno: ref_c a la izquierda, monto_c a la derecha
                 espacio_c = ancho_col - len(ref_c) - len(monto_c) - 2
                 col_c = f" {ref_c}{' ' * max(0, espacio_c)}{monto_c} "
             else:
                 col_c = " " * ancho_col
 
-            # Formato Haber
             if a is not None:
                 ref_a = f"Pda #{a.numero_partida:<3}"
                 monto_a = formato_moneda(a.haber)
@@ -70,10 +64,8 @@ def generar_texto_t_grafica(cuenta: CuentaMayor, ancho_col: int = 26) -> str:
 
             lineas.append(f"{col_c}│{col_a}")
 
-    # Línea de cierre de movimientos
     lineas.append(barra_horizontal)
 
-    # Sumas al pie de la T
     lbl_debe = "SUMA:"
     monto_tot_d = formato_moneda(cuenta.total_debe)
     esp_d = ancho_col - len(lbl_debe) - len(monto_tot_d) - 2
@@ -86,7 +78,6 @@ def generar_texto_t_grafica(cuenta: CuentaMayor, ancho_col: int = 26) -> str:
 
     lineas.append(f"{pie_debe}│{pie_haber}")
 
-    # Base de la T
     base_t = ("═" * ancho_col) + "┴" + ("═" * ancho_col)
     lineas.append(base_t)
 
