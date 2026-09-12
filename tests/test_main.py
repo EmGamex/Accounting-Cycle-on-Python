@@ -128,4 +128,34 @@ class TestMainOrquestador(unittest.TestCase):
                 menu_persistencia(gestor)
                 self.assertTrue(os.path.exists(test_file))
 
+    @patch("main.menu_principal")
+    def test_main_entrypoint(self, mock_menu):
+        """Verifica que main() invoque menu_principal()."""
+        from main import main
+        main()
+        mock_menu.assert_called_once()
+
+    @patch("main.menu_principal", side_effect=KeyboardInterrupt)
+    @patch("sys.stdout", new_callable=io.StringIO)
+    def test_main_keyboard_interrupt(self, mock_stdout, mock_menu):
+        """Verifica que main() capture KeyboardInterrupt y salga limpiamente."""
+        from main import main
+        with self.assertRaises(SystemExit) as cm:
+            main()
+        self.assertEqual(cm.exception.code, 0)
+        self.assertIn("Sesión finalizada por el usuario", mock_stdout.getvalue())
+
+    def test_orquestador_pedir_confirmacion(self):
+        """Verifica la función auxiliar pedir_confirmacion."""
+        import orquestador
+        with patch("builtins.input", side_effect=["s", "si", "y", "yes", "n", "no", ""]):
+            self.assertTrue(orquestador.pedir_confirmacion("¿Confirmar?"))
+            self.assertTrue(orquestador.pedir_confirmacion("¿Confirmar?"))
+            self.assertTrue(orquestador.pedir_confirmacion("¿Confirmar?"))
+            self.assertTrue(orquestador.pedir_confirmacion("¿Confirmar?"))
+            self.assertFalse(orquestador.pedir_confirmacion("¿Confirmar?"))
+            self.assertFalse(orquestador.pedir_confirmacion("¿Confirmar?"))
+            self.assertTrue(orquestador.pedir_confirmacion("¿Confirmar?", default=True))
+
+
 
