@@ -53,6 +53,32 @@ class TestPlanillasCLI(unittest.TestCase):
         self.assertIn("BOLETA DE PAGO: JUAN PEREZ", salida)
 
     @patch("sys.stdout", new_callable=io.StringIO)
+    @patch("planilla.cli.cargar_empleados_csv")
+    @patch("builtins.input", side_effect=["2"])
+    def test_menu_csv_cargar_default(self, mock_input, mock_cargar, mock_stdout):
+        """Verifica que la opción 2 cargue desde el archivo CSV default directamente."""
+        mock_cargar.return_value = [
+            DatosEmpleado(nombre="Ana Lopez", departamento="Ventas", sueldo_base=Decimal("6000.00"))
+        ]
+        res = menu_herramientas_csv([])
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0].empleado, "Ana Lopez")
+        mock_cargar.assert_called_once_with("plantilla_empleados.csv")
+
+    @patch("sys.stdout", new_callable=io.StringIO)
+    @patch("planilla.cli.cargar_empleados_csv")
+    @patch("builtins.input", side_effect=["3", "mi_ruta.csv"])
+    def test_menu_csv_cargar_personalizado(self, mock_input, mock_cargar, mock_stdout):
+        """Verifica que la opción 3 pida ruta y cargue desde la ruta especificada."""
+        mock_cargar.return_value = [
+            DatosEmpleado(nombre="Carlos Ruiz", departamento="Administración", sueldo_base=Decimal("4500.00"))
+        ]
+        res = menu_herramientas_csv([])
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0].empleado, "Carlos Ruiz")
+        mock_cargar.assert_called_once_with("mi_ruta.csv")
+
+    @patch("sys.stdout", new_callable=io.StringIO)
     @patch("builtins.input", side_effect=["4"])
     def test_menu_csv_volver(self, mock_input, mock_stdout):
         """Verifica la opción de volver al menú principal desde herramientas CSV."""

@@ -63,9 +63,8 @@ def _generar_plantilla_csv_accion() -> None:
     imprimir_exito(f"Plantilla generada exitosamente en: {ruta}")
 
 
-def _cargar_empleados_csv_accion(planillas_actuales: List[ResultadoPlanilla]) -> List[ResultadoPlanilla]:
-    """Acción de cargar y procesar empleados desde archivo CSV."""
-    ruta = input("Ruta del archivo CSV a cargar: ").strip()
+def _procesar_archivo_csv(ruta: str, planillas_actuales: List[ResultadoPlanilla]) -> List[ResultadoPlanilla]:
+    """Lee y procesa empleados desde una ruta CSV dada."""
     try:
         empleados = cargar_empleados_csv(ruta)
         if not empleados:
@@ -85,6 +84,25 @@ def _cargar_empleados_csv_accion(planillas_actuales: List[ResultadoPlanilla]) ->
     return planillas_actuales
 
 
+def _cargar_empleados_default_accion(planillas_actuales: List[ResultadoPlanilla]) -> List[ResultadoPlanilla]:
+    """Acción de cargar empleados directamente desde el archivo de plantilla predeterminado."""
+    return _procesar_archivo_csv(ARCHIVO_PLANTILLA_CSV_DEFAULT, planillas_actuales)
+
+
+def _cargar_empleados_personalizado_accion(planillas_actuales: List[ResultadoPlanilla]) -> List[ResultadoPlanilla]:
+    """Acción de solicitar una ruta de archivo CSV personalizada y cargar empleados."""
+    ruta = input("Ruta del archivo CSV a cargar: ").strip()
+    if not ruta:
+        imprimir_alerta("Ruta vacía. Operación cancelada.")
+        return planillas_actuales
+    return _procesar_archivo_csv(ruta, planillas_actuales)
+
+
+def _cargar_empleados_csv_accion(planillas_actuales: List[ResultadoPlanilla]) -> List[ResultadoPlanilla]:
+    """Compatibilidad: delega en la carga personalizada."""
+    return _cargar_empleados_personalizado_accion(planillas_actuales)
+
+
 def _exportar_planillas_csv_accion(planillas_actuales: List[ResultadoPlanilla]) -> None:
     """Acción de exportar planillas existentes a archivo CSV."""
     prompt = f"Nombre de archivo de destino [{ARCHIVO_PLANILLA_DEFAULT}]: "
@@ -95,8 +113,11 @@ def _exportar_planillas_csv_accion(planillas_actuales: List[ResultadoPlanilla]) 
 
 def _obtener_acciones_csv(planillas_actuales: List[ResultadoPlanilla], contenedor: list[List[ResultadoPlanilla]]) -> List[AccionMenu]:
     """Construye las acciones disponibles para el submenú CSV según su posición secuencial."""
-    def ejecutar_carga() -> None:
-        contenedor[0] = _cargar_empleados_csv_accion(contenedor[0])
+    def ejecutar_carga_default() -> None:
+        contenedor[0] = _cargar_empleados_default_accion(contenedor[0])
+
+    def ejecutar_carga_personalizada() -> None:
+        contenedor[0] = _cargar_empleados_personalizado_accion(contenedor[0])
 
     acciones = [
         AccionMenu(
@@ -104,8 +125,12 @@ def _obtener_acciones_csv(planillas_actuales: List[ResultadoPlanilla], contenedo
             _generar_plantilla_csv_accion,
         ),
         AccionMenu(
-            "Cargar y procesar empleados desde un archivo CSV",
-            ejecutar_carga,
+            f"Cargar empleados desde '{ARCHIVO_PLANTILLA_CSV_DEFAULT}'",
+            ejecutar_carga_default,
+        ),
+        AccionMenu(
+            "Cargar empleados desde una ruta personalizada",
+            ejecutar_carga_personalizada,
         ),
     ]
 
