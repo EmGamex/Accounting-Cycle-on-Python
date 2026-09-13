@@ -73,7 +73,6 @@ _ejercicio_activo: EjercicioContable = EjercicioContable()
 
 def _guardar_ejercicio(gestor: GestorLibroDiario, ruta: str) -> None:
     """Guarda las partidas del gestor y el estado del ejercicio en el archivo JSON especificado."""
-    global _ejercicio_activo
     _ejercicio_activo.libro_diario = gestor.libro
     guardar_ejercicio_json(_ejercicio_activo, ruta)
     cant_partidas = len(gestor.libro.partidas)
@@ -163,7 +162,6 @@ def menu_persistencia(gestor: GestorLibroDiario) -> None:
 
 def _accion_apertura(gestor: GestorLibroDiario) -> None:
     """Ejecuta el flujo de apertura y permite asentarlo en el libro diario."""
-    global _ejercicio_activo
     resumen, partida_apertura = iniciar_flujo_apertura(
         cuentas_iniciales=_ejercicio_activo.items_apertura
     )
@@ -195,7 +193,6 @@ def _accion_apertura(gestor: GestorLibroDiario) -> None:
 
 def _accion_planillas(gestor: GestorLibroDiario) -> None:
     """Ejecuta el flujo de nóminas y permite asentarlo en el libro diario."""
-    global _ejercicio_activo
     planillas, partida_nomina = iniciar_flujo_planillas(
         planillas_iniciales=_ejercicio_activo.planillas
     )

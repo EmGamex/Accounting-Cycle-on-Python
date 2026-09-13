@@ -42,7 +42,6 @@ jobs:
   test:
     name: Test (${{ matrix.os }} - Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
-    needs: [lint]
     strategy:
       fail-fast: false
       matrix:
