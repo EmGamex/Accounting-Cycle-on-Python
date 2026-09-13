@@ -3,8 +3,18 @@
 Proporciona la estructura contable formal, nomenclatura compatible con NIIF para PYMES
 y legislación guatemalteca (SAT / IGSS / Código de Trabajo), así como funciones de navegación.
 """
-from enum import StrEnum
+import sys
 from typing import Dict, List, Optional, Tuple
+
+if sys.version_info >= (3, 11):
+    from enum import StrEnum
+else:
+    from enum import Enum
+
+    class StrEnum(str, Enum):
+        """Polyfill de StrEnum para compatibilidad con Python < 3.11."""
+        def __str__(self) -> str:
+            return str(self.value)
 
 
 class Cuenta(StrEnum):
