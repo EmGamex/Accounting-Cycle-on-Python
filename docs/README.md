@@ -10,14 +10,14 @@ Esta documentación está estructurada bajo el **Marco Diátaxis**, separando si
 flowchart TD
     subgraph OrientacionAprendizaje ["▲ ORIENTADO AL APRENDIZAJE"]
         direction LR
-        T["TUTORIALES<br/><i>(Aprender paso a paso)</i><br/>• 01. Tu Primer Ciclo Contable"]
-        E["EXPLICACIÓN<br/><i>(Entender conceptos y arquitectura)</i><br/>• Ciclo Contable y Partida Doble<br/>• Precisión Decimal vs Float<br/>• Arquitectura Modular<br/>• Persistencia y Modelo JSON<br/>• Motor Fiscal Guatemala"]
+        T["📘 TUTORIALES<br/><i>(Aprender paso a paso)</i><br/>• 01. Tu Primer Ciclo Contable"]
+        E["💡 EXPLICACIÓN<br/><i>(Entender conceptos y arquitectura)</i><br/>• Ciclo Contable y Partida Doble<br/>• Precisión Decimal vs Float<br/>• Arquitectura Modular<br/>• Persistencia y Modelo JSON<br/>• Motor Fiscal Guatemala<br/>• Búsqueda y Normalización<br/>• Estrategia de Testing"]
     end
 
     subgraph OrientacionInformacion ["▼ ORIENTADO A LA INFORMACIÓN"]
         direction LR
-        H["GUÍAS HOW-TO<br/><i>(Resolver un problema concreto)</i><br/>• Apertura de Empresa<br/>• Procesar Nóminas<br/>• Estructurar Partidas de Diario<br/>• Extender Catálogo"]
-        R["REFERENCIA<br/><i>(Diccionario técnico y normativo)</i><br/>• Catálogo de Cuentas NIIF/SAT<br/>• Modelos y Dataclasses<br/>• Legislación y Tasas Guatemala"]
+        H["🛠️ GUÍAS HOW-TO<br/><i>(Resolver un problema concreto)</i><br/>• Apertura de Empresa<br/>• Procesar Nóminas<br/>• Estructurar Partidas de Diario<br/>• Extender Catálogo<br/>• Mayorizar y T-Gráficas<br/>• Emitir Balances y Cierre"]
+        R["📖 REFERENCIA<br/><i>(Diccionario técnico y normativo)</i><br/>• Catálogo de Cuentas NIIF/SAT<br/>• Modelos y Dataclasses<br/>• Legislación y Tasas Guatemala<br/>• Interfaz Terminal y Reportes"]
     end
 
     T <===>|Práctico  ◀─────────▶  Teórico| E
@@ -43,7 +43,7 @@ flowchart LR
 
 ### 1. [Tutoriales (Tutorials)](tutorials/)
 *Orientados al aprendizaje práctico para usuarios o desarrolladores nuevos.*
-* **[01. Tu Primer Ciclo Contable](tutorials/01_primer_ciclo_contable.md)**: Guía paso a paso desde el registro del inventario inicial y la Partida de Apertura hasta la liquidación de la primera planilla de sueldos.
+* **[01. Tu Primer Ciclo Contable en 15 Minutos](tutorials/01_primer_ciclo_contable.md)**: Guía paso a paso desde el registro del inventario inicial y la Partida de Apertura hasta la liquidación de la nómina, mayorización y balance de 4 columnas.
 
 ### 2. [Guías Prácticas (How-To Guides)](how-to/)
 *Recetas orientadas a resolver problemas o tareas específicas de negocio.*
@@ -51,12 +51,15 @@ flowchart LR
 * **[Cómo Procesar Nóminas y Planillas](how-to/procesar_nomina_y_planillas.md)**: Cálculo de horas extras, comisiones, retenciones de IGSS e ISR, y generación de boletas.
 * **[Cómo Estructurar Partidas en el Libro Diario](how-to/estructurar_partidas_diario.md)**: Reglas de sangrías, glosas y verificación matemática de doble columna (Debe/Haber).
 * **[Cómo Extender el Catálogo de Cuentas](how-to/extender_catalogo_cuentas.md)**: Agregar nuevas cuentas y subcuentas manteniendo la jerarquía NIIF.
+* **[Cómo Mayorizar Cuentas y Generar T-Gráficas](how-to/mayorizar_y_generar_t_graficas.md)**: Pases automáticos del Diario al Mayor, T-Gráficas, mayor formal a 3 columnas y detección de saldos anómalos.
+* **[Cómo Emitir Balances y Gestionar el Cierre](how-to/emitir_balances_y_cerrar_ejercicio.md)**: Balance de 4 Columnas con doble cuadre, Balance de Situación General y persistencia JSON.
 
 ### 3. [Referencia Técnica (Reference)](reference/)
 *Descripciones técnicas, diccionarios de datos y parámetros legales.*
 * **[Catálogo de Cuentas NIIF/SAT](reference/catalogo_cuentas.md)**: Nomenclatura completa, códigos, nombres y clasificación por clase/subgrupo.
-* **[Modelos y Dataclasses](reference/modelos_y_dataclasses.md)**: Estructuras de datos fuertemente tipadas (`apertura.models`, `planilla.models`, `diario.models`, `persistencia.models`).
+* **[Modelos y Dataclasses](reference/modelos_y_dataclasses.md)**: Estructuras de datos fuertemente tipadas de todos los subsistemas (`apertura`, `planilla`, `diario`, `mayor`, `balance`, `persistencia`).
 * **[Legislación y Parámetros Fiscales de Guatemala](reference/legislacion_y_tasas_guatemala.md)**: Porcentajes vigentes de IGSS (4.83% y 12.67%), Bonificación Q250.00, IVA 12% y retención ISR.
+* **[Interfaz de Terminal y Sistema de Reportes](reference/interfaz_terminal_y_reportes.md)**: Catálogo de utilidades visuales Rich (`ui/`), temas, tablas y exportadores de texto (`reportes/`).
 
 ### 4. [Explicación y Arquitectura (Explanation)](explanation/)
 *Artículos de fondo para comprender los fundamentos teóricos y de diseño.*
@@ -65,6 +68,8 @@ flowchart LR
 * **[Precisión Financiera con Decimal](explanation/precision_decimal_financiera.md)**: Por qué se prohíbe el uso de `float` y cómo se garantiza la precisión al centavo.
 * **[Persistencia JSON, Snapshots y Modelo Unificado](explanation/persistencia_y_modelo_de_datos.md)**: Serialización estructurada, compatibilidad de esquemas y atomicidad con backups.
 * **[Fundamentos del Motor Fiscal y Laboral de Guatemala](explanation/motor_fiscal_guatemala.md)**: Mecánica del IVA (crédito/débito) y provisiones mensuales legales (Aguinaldo, Bono 14, Indemnización).
+* **[Normalización Lingüística y Búsqueda Difusa](explanation/normalizacion_y_busqueda_contable.md)**: Normalización NFD, mapeo semántico de sinónimos, indexación O(1) y coincidencia difusa.
+* **[Estrategia de Pruebas y Aseguramiento de Calidad](explanation/estrategia_de_testing_y_calidad.md)**: Pirámide de pruebas con 174 tests, mocking de CLI Rich y tolerancia cero al centavo.
 
 ---
 

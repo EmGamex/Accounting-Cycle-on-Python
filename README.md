@@ -44,10 +44,10 @@ python main.py
 
 La documentación completa del proyecto está organizada bajo el marco **Diátaxis** en [`docs/`](docs/README.md):
 
-- **[Tutoriales](docs/tutorials/)**: [Tu Primer Ciclo Contable en 15 Minutos](docs/tutorials/01_primer_ciclo_contable.md) (guía paso a paso desde apertura hasta nómina).
-- **[Guías Prácticas](docs/how-to/)**: [Apertura de Empresa](docs/how-to/registrar_apertura_empresa.md) | [Procesamiento de Planillas](docs/how-to/procesar_nomina_y_planillas.md) | [Partidas de Diario](docs/how-to/estructurar_partidas_diario.md) | [Extender Catálogo](docs/how-to/extender_catalogo_cuentas.md).
-- **[Referencia Técnica](docs/reference/)**: [Catálogo NIIF/SAT](docs/reference/catalogo_cuentas.md) | [Modelos de Datos](docs/reference/modelos_y_dataclasses.md) | [Tasas y Leyes de Guatemala](docs/reference/legislacion_y_tasas_guatemala.md).
-- **[Explicación y Arquitectura](docs/explanation/)**: [Arquitectura Modular](docs/explanation/arquitectura_del_sistema.md) | [Partida Doble y Mayor](docs/explanation/ciclo_contable_y_partida_doble.md) | [Precisión Decimal](docs/explanation/precision_decimal_financiera.md) | [Persistencia JSON](docs/explanation/persistencia_y_modelo_de_datos.md) | [Motor Fiscal](docs/explanation/motor_fiscal_guatemala.md).
+- **[Tutoriales](docs/tutorials/)**: [Tu Primer Ciclo Contable en 15 Minutos](docs/tutorials/01_primer_ciclo_contable.md) (guía paso a paso desde apertura hasta balances).
+- **[Guías Prácticas](docs/how-to/)**: [Apertura de Empresa](docs/how-to/registrar_apertura_empresa.md) | [Planillas](docs/how-to/procesar_nomina_y_planillas.md) | [Partidas Diario](docs/how-to/estructurar_partidas_diario.md) | [Mayor y T-Gráficas](docs/how-to/mayorizar_y_generar_t_graficas.md) | [Balances y Cierre](docs/how-to/emitir_balances_y_cerrar_ejercicio.md) | [Extender Catálogo](docs/how-to/extender_catalogo_cuentas.md).
+- **[Referencia Técnica](docs/reference/)**: [Catálogo NIIF/SAT](docs/reference/catalogo_cuentas.md) | [Modelos y Dataclasses](docs/reference/modelos_y_dataclasses.md) | [Leyes de Guatemala](docs/reference/legislacion_y_tasas_guatemala.md) | [Terminal y Reportes](docs/reference/interfaz_terminal_y_reportes.md).
+- **[Explicación y Arquitectura](docs/explanation/)**: [Arquitectura Modular](docs/explanation/arquitectura_del_sistema.md) | [Partida Doble](docs/explanation/ciclo_contable_y_partida_doble.md) | [Precisión Decimal](docs/explanation/precision_decimal_financiera.md) | [Persistencia JSON](docs/explanation/persistencia_y_modelo_de_datos.md) | [Motor Fiscal](docs/explanation/motor_fiscal_guatemala.md) | [Búsqueda Difusa](docs/explanation/normalizacion_y_busqueda_contable.md) | [Estrategia Testing](docs/explanation/estrategia_de_testing_y_calidad.md).
 
 ---
 
