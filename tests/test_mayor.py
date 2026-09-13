@@ -1,4 +1,4 @@
-﻿"""Pruebas unitarias para el módulo mayor/ (Modelos y Motor de Mayorización)."""
+"""Pruebas unitarias para el módulo mayor/ (Modelos y Motor de Mayorización)."""
 from datetime import date
 from decimal import Decimal
 import unittest

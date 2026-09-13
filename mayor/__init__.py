@@ -1,4 +1,4 @@
-﻿"""Módulo de Libro Mayor y T-Gráficas del Sistema Contable Integral (Guatemala)."""
+"""Módulo de Libro Mayor y T-Gráficas del Sistema Contable Integral (Guatemala)."""
 from .engine import GestorLibroMayor, mayorizar_libro_diario
 from .exceptions import (
     CuentaNoEncontradaError,

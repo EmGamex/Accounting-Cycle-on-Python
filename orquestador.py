@@ -22,6 +22,7 @@ from config import (
     RESPUESTAS_AFIRMATIVAS as CFG_RESPUESTAS_AFIRMATIVAS,
 )
 from ui import (
+    COLOR_SECUNDARIO,
     console,
     formatear_moneda,
     imprimir_alerta,
@@ -29,6 +30,7 @@ from ui import (
     imprimir_banner,
     imprimir_estado_ejercicio as ui_imprimir_estado_ejercicio,
     imprimir_exito,
+    imprimir_menu_opciones,
     pedir_confirmacion as ui_pedir_confirmacion,
 )
 
@@ -47,9 +49,8 @@ class AccionMenu(NamedTuple):
 
 def _mostrar_opciones_con_indices(acciones: list[AccionMenu], texto_salir: str = "Volver / Salir") -> None:
     """Imprime una lista de acciones numeradas secuencialmente y la opción de salida."""
-    for idx, item in enumerate(acciones, start=1):
-        console.print(f"  [bold cyan][{idx}][/bold cyan] {item.descripcion}")
-    console.print(f"  [bold dim][{OPCION_SALIR}][/bold dim] {texto_salir}")
+    opciones = [(str(idx), item.descripcion) for idx, item in enumerate(acciones, start=1)]
+    imprimir_menu_opciones(opciones, texto_salir=texto_salir, salir_codigo=OPCION_SALIR)
 
 
 # ==============================================================================
@@ -143,7 +144,7 @@ def _obtener_acciones_persistencia(gestor: GestorLibroDiario) -> list[AccionMenu
 
 def menu_persistencia(gestor: GestorLibroDiario) -> None:
     """Submenú para guardar o cargar el ejercicio contable en formato JSON."""
-    imprimir_banner("GESTIÓN Y PERSISTENCIA DEL EJERCICIO (JSON)", border_style="blue")
+    imprimir_banner("GESTIÓN Y PERSISTENCIA DEL EJERCICIO (JSON)", border_style=COLOR_SECUNDARIO)
 
     acciones = _obtener_acciones_persistencia(gestor)
     _mostrar_opciones_con_indices(acciones, texto_salir="Volver al menú principal")

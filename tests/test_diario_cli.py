@@ -278,6 +278,58 @@ class TestDiarioCliYAsistentes(unittest.TestCase):
         self.assertEqual(gestor.libro.partidas[0].numero, 1)
         self.assertEqual(gestor.libro.partidas[0].glosa, "Asiento 2")
 
+    @patch("builtins.input", side_effect=["2", "1"])
+    def test_mover_partida_posicion_cli(self, mock_input):
+        from diario.cli import _mover_partida_posicion
+        from diario.models import MovimientoLinea, PartidaDiario
+        gestor = GestorLibroDiario(estricto_cronologico=False)
+        p1 = PartidaDiario(1, date(2026, 1, 1), "Asiento 1", [
+            MovimientoLinea("1101", "Caja", debe=Decimal("100.00")),
+            MovimientoLinea("1102", "Bancos", haber=Decimal("100.00")),
+        ])
+        p2 = PartidaDiario(2, date(2026, 1, 2), "Asiento 2", [
+            MovimientoLinea("1101", "Caja", debe=Decimal("50.00")),
+            MovimientoLinea("1102", "Bancos", haber=Decimal("50.00")),
+        ])
+        gestor.registrar_partida(p1)
+        gestor.registrar_partida(p2)
+
+        _mover_partida_posicion(gestor)
+        # El Asiento 2 ahora debe ser la Partida No. 1
+        self.assertEqual(gestor.libro.partidas[0].numero, 1)
+        self.assertEqual(gestor.libro.partidas[0].glosa, "Asiento 2")
+        self.assertEqual(gestor.libro.partidas[1].numero, 2)
+        self.assertEqual(gestor.libro.partidas[1].glosa, "Asiento 1")
+
+    @patch("builtins.input", side_effect=["s"])
+    def test_ordenar_cronologicamente_interactivo_cli(self, mock_input):
+        from diario.cli import _ordenar_cronologicamente_interactivo
+        from diario.models import MovimientoLinea, PartidaDiario
+        gestor = GestorLibroDiario(estricto_cronologico=False)
+        p1 = PartidaDiario(1, date(2026, 1, 20), "Operacion Tardia", [
+            MovimientoLinea("1101", "Caja", debe=Decimal("10.00")),
+            MovimientoLinea("1102", "Bancos", haber=Decimal("10.00")),
+        ])
+        p2 = PartidaDiario(2, date(2026, 1, 5), "Operacion Temprana", [
+            MovimientoLinea("1101", "Caja", debe=Decimal("20.00")),
+            MovimientoLinea("1102", "Bancos", haber=Decimal("20.00")),
+        ])
+        gestor.registrar_partida(p1)
+        gestor.registrar_partida(p2)
+
+        _ordenar_cronologicamente_interactivo(gestor)
+        self.assertEqual(gestor.libro.partidas[0].numero, 1)
+        self.assertEqual(gestor.libro.partidas[0].glosa, "Operacion Temprana")
+        self.assertEqual(gestor.libro.partidas[1].numero, 2)
+        self.assertEqual(gestor.libro.partidas[1].glosa, "Operacion Tardia")
+
+    @patch("builtins.input", side_effect=["1", "0", "0"])
+    def test_navegacion_submenus_diario(self, mock_input):
+        gestor = GestorLibroDiario(estricto_cronologico=False)
+        # Debe entrar a Operaciones (1), volver con 0 y salir con 0
+        iniciar_flujo_diario(gestor)
+        self.assertEqual(len(gestor.libro.partidas), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

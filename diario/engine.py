@@ -1,7 +1,7 @@
 """Motor de reglas, correlativos y validación del Libro Diario."""
 from collections import defaultdict
 from decimal import Decimal
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import catalogo_contable
 from config import CERO_MONETARIO, FORMATO_FECHA, SIMBOLO_MONEDA
@@ -156,6 +156,30 @@ class GestorLibroDiario:
                 p.numero = i
 
         return True
+
+    def mover_partida(self, origen: int, destino: int) -> bool:
+        """Mueve una partida del correlativo origen al destino y re-indexa la secuencia."""
+        total = len(self.libro.partidas)
+        if not (1 <= origen <= total) or not (1 <= destino <= total):
+            return False
+
+        if origen == destino:
+            return True
+
+        partida = self.libro.partidas.pop(origen - 1)
+        self.libro.partidas.insert(destino - 1, partida)
+
+        # Re-correlacionar toda la secuencia
+        for i, p in enumerate(self.libro.partidas, start=1):
+            p.numero = i
+
+        return True
+
+    def ordenar_partidas_cronologicamente(self) -> None:
+        """Ordena todas las partidas por fecha ascendente de forma estable y re-indexa correlativos."""
+        self.libro.partidas.sort(key=lambda p: p.fecha)
+        for i, p in enumerate(self.libro.partidas, start=1):
+            p.numero = i
 
     def totales(self) -> Tuple[Decimal, Decimal]:
         """Retorna una tupla (Total Debe, Total Haber) acumulada del libro."""

@@ -1,4 +1,4 @@
-﻿"""Excepciones especializadas para el módulo de Libro Mayor."""
+"""Excepciones especializadas para el módulo de Libro Mayor."""
 
 
 class MayorError(Exception):

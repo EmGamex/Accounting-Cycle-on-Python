@@ -20,6 +20,7 @@ from ui import (
     formatear_moneda,
     generar_tabla_resumen_partidas,
     imprimir_alerta,
+    imprimir_aviso,
     imprimir_banner,
     imprimir_exito,
     imprimir_menu_opciones,
@@ -197,46 +198,102 @@ def _eliminar_partida_existente(gestor: GestorLibroDiario) -> None:
         imprimir_exito(f"Partida No. {numero} eliminada. Correlativos re-indexados correctamente.")
 
 
-def _obtener_acciones_diario() -> list[AccionMenu]:
-    """Define la lista ordenada de operaciones disponibles en el menú."""
-    return [
-        AccionMenu(
-            "Registrar Compra / Gasto con IVA (Crédito Fiscal 12%)",
-            registrar_compra_asistida,
-        ),
-        AccionMenu(
-            "Registrar Venta con IVA (Débito Fiscal 12%)",
-            registrar_venta_asistida,
-        ),
-        AccionMenu(
-            "Registrar Operación Simple (Traslado, Cobro a Clientes, Pago a Proveedores)",
-            registrar_operacion_simple_asistida,
-        ),
-        AccionMenu(
-            "Registrar Partida Libre / Asiento General (Línea por línea)",
-            registrar_partida_libre_asistida,
-        ),
-        AccionMenu(
-            "Regularizar IVA del Período (Ajuste Débito vs. Crédito Fiscal)",
-            regularizar_iva_asistido,
-        ),
-        AccionMenu(
-            "Consultar Partida por Número",
-            _consultar_partida_por_numero,
-        ),
-        AccionMenu(
-            "Modificar Partida Existente (Glosa, Fecha o Líneas)",
-            _modificar_partida_existente,
-        ),
-        AccionMenu(
-            "Eliminar / Anular Partida (Con Re-correlación)",
-            _eliminar_partida_existente,
-        ),
-        AccionMenu(
-            "Ver Libro Diario Completo",
-            _mostrar_libro_diario,
-        ),
+def _mover_partida_posicion(gestor: GestorLibroDiario) -> None:
+    """Permite mover una partida contable a una nueva posición correlativa."""
+    partida = _seleccionar_partida_interactiva(gestor, "mover")
+    if not partida:
+        return
+
+    origen = partida.numero
+    total = len(gestor.libro.partidas)
+    destino_str = input(f"Nueva posición para la Partida No. {origen} [1-{total}, Enter para cancelar]: ").strip()
+    if not destino_str:
+        return
+    if not destino_str.isdigit():
+        imprimir_alerta("Debe ingresar un número de posición válido.")
+        return
+
+    destino = int(destino_str)
+    if not (1 <= destino <= total):
+        imprimir_alerta(f"La posición debe estar entre 1 y {total}.")
+        return
+
+    if origen == destino:
+        imprimir_aviso(f"La partida ya se encuentra en la posición No. {destino}.")
+        return
+
+    gestor.mover_partida(origen, destino)
+    imprimir_exito(f"Partida movida exitosamente de la posición #{origen} a la #{destino}.")
+    _mostrar_resumen_partidas_tabla(gestor, "LIBRO DIARIO ACTUALIZADO")
+
+
+def _ordenar_cronologicamente_interactivo(gestor: GestorLibroDiario) -> None:
+    """Reordena todas las partidas por fecha ascendente y re-indexa los correlativos."""
+    if not gestor.libro.partidas:
+        imprimir_alerta("El Libro Diario no contiene partidas asentadas.")
+        return
+
+    if len(gestor.libro.partidas) == 1:
+        imprimir_aviso("Solo hay 1 partida en el libro diario. No es necesario reordenar.")
+        return
+
+    confirmado = pedir_confirmacion(
+        "¿Deseas reordenar todas las partidas por fecha cronológica ascendente? (s/n): ",
+        default=False,
+    )
+    if confirmado:
+        gestor.ordenar_partidas_cronologicamente()
+        imprimir_exito("Partidas reordenadas cronológicamente y correlativos re-indexados.")
+        _mostrar_resumen_partidas_tabla(gestor, "LIBRO DIARIO REORDENADO")
+
+
+def _ejecutar_submenu(titulo_menu: str, acciones: list[AccionMenu], gestor: GestorLibroDiario) -> None:
+    """Controlador genérico para la navegación y ejecución de submenús interactivos."""
+    while True:
+        console.print(f"\n[bold]{titulo_menu}:[/bold]")
+        opciones = [(str(idx), item.descripcion) for idx, item in enumerate(acciones, start=1)]
+        imprimir_menu_opciones(opciones, texto_salir="Volver al Menú Principal", salir_codigo=OPCION_SALIR)
+
+        seleccion = input(f"\nSeleccione una opción [1-{len(acciones)}, {OPCION_SALIR}]: ").strip()
+        if seleccion == OPCION_SALIR:
+            break
+
+        if seleccion.isdigit() and 1 <= int(seleccion) <= len(acciones):
+            acciones[int(seleccion) - 1].accion(gestor)
+        else:
+            imprimir_alerta(MENSAJE_ALERTA_OPCION)
+
+
+def _submenu_registro_operaciones(gestor: GestorLibroDiario) -> None:
+    """Submenú especializado en el asiento de transacciones comerciales y operativas."""
+    acciones = [
+        AccionMenu("Registrar Compra / Gasto con IVA (Crédito Fiscal 12%)", registrar_compra_asistida),
+        AccionMenu("Registrar Venta con IVA (Débito Fiscal 12%)", registrar_venta_asistida),
+        AccionMenu("Registrar Operación Simple (Cobro a Clientes, Pago a Proveedores, Depósitos)", registrar_operacion_simple_asistida),
+        AccionMenu("Registrar Partida Libre / Asiento General (Línea por línea)", registrar_partida_libre_asistida),
     ]
+    _ejecutar_submenu("REGISTRO DE OPERACIONES DIARIAS", acciones, gestor)
+
+
+def _submenu_gestion_partidas(gestor: GestorLibroDiario) -> None:
+    """Submenú especializado en la consulta, modificación, reordenamiento y anulación de partidas."""
+    acciones = [
+        AccionMenu("Consultar Partida por Número", _consultar_partida_por_numero),
+        AccionMenu("Modificar Partida Existente (Glosa, Fecha o Líneas)", _modificar_partida_existente),
+        AccionMenu("Reordenar / Mover Partida de Posición", _mover_partida_posicion),
+        AccionMenu("Reordenar Todo el Libro por Fecha Cronológica", _ordenar_cronologicamente_interactivo),
+        AccionMenu("Eliminar / Anular Partida (Con Re-correlación)", _eliminar_partida_existente),
+    ]
+    _ejecutar_submenu("GESTIÓN Y REORGANIZACIÓN DE PARTIDAS", acciones, gestor)
+
+
+def _submenu_reportes_diario(gestor: GestorLibroDiario) -> None:
+    """Submenú para visualizar partidas asentadas en detalle o resumen."""
+    acciones = [
+        AccionMenu("Ver Libro Diario Completo (Detallado en Tablas)", _mostrar_libro_diario),
+        AccionMenu("Ver Resumen General de Partidas (Tabla compacta)", lambda g: _mostrar_resumen_partidas_tabla(g)),
+    ]
+    _ejecutar_submenu("CONSULTAS Y REPORTES DEL LIBRO DIARIO", acciones, gestor)
 
 
 def _verificar_regularizacion_al_finalizar(gestor: GestorLibroDiario) -> None:
@@ -251,11 +308,14 @@ def _verificar_regularizacion_al_finalizar(gestor: GestorLibroDiario) -> None:
             regularizar_iva_asistido(gestor)
 
 
-def _mostrar_menu(acciones: list[AccionMenu]) -> None:
-    """Imprime las opciones disponibles del menú basándose en su posición."""
-    console.print("Operaciones diarias disponibles:")
-    opciones = [(str(idx), item.descripcion) for idx, item in enumerate(acciones, start=1)]
-    imprimir_menu_opciones(opciones, texto_salir="Volver / Salir", salir_codigo=OPCION_SALIR)
+def _obtener_menus_principales() -> list[AccionMenu]:
+    """Define los módulos o áreas principales del Libro Diario."""
+    return [
+        AccionMenu("Registro de Operaciones (Compras, Ventas, Tesorería, Asiento Libre)", _submenu_registro_operaciones),
+        AccionMenu("Gestión de Partidas (Consultar, Modificar, Reordenar, Eliminar)", _submenu_gestion_partidas),
+        AccionMenu("Consultas y Reportes (Ver Libro Diario Completo, Resumen)", _submenu_reportes_diario),
+        AccionMenu("Procesos Fiscales y Cierre (Regularización de IVA)", regularizar_iva_asistido),
+    ]
 
 
 def iniciar_flujo_diario(gestor: Optional[GestorLibroDiario] = None) -> None:
@@ -264,13 +324,15 @@ def iniciar_flujo_diario(gestor: Optional[GestorLibroDiario] = None) -> None:
         gestor = GestorLibroDiario(estricto_cronologico=False)
 
     _imprimir_encabezado()
-    acciones = _obtener_acciones_diario()
+    menus = _obtener_menus_principales()
 
     while True:
         _imprimir_resumen_libro(gestor)
-        _mostrar_menu(acciones)
+        console.print("Áreas de trabajo disponibles:")
+        opciones = [(str(idx), item.descripcion) for idx, item in enumerate(menus, start=1)]
+        imprimir_menu_opciones(opciones, texto_salir="Volver / Salir", salir_codigo=OPCION_SALIR)
 
-        prompt_rango = f"[1-{len(acciones)}, {OPCION_SALIR}]"
+        prompt_rango = f"[1-{len(menus)}, {OPCION_SALIR}]"
         seleccion = input(f"\nSeleccione una opción {prompt_rango}: ").strip()
 
         if seleccion == OPCION_SALIR:
@@ -278,7 +340,7 @@ def iniciar_flujo_diario(gestor: Optional[GestorLibroDiario] = None) -> None:
             console.print(f"\n[{COLOR_EXITO}]¡Gracias por utilizar el Sistema de Libro Diario![/{COLOR_EXITO}]")
             break
 
-        if seleccion.isdigit() and 1 <= int(seleccion) <= len(acciones):
-            acciones[int(seleccion) - 1].accion(gestor)
+        if seleccion.isdigit() and 1 <= int(seleccion) <= len(menus):
+            menus[int(seleccion) - 1].accion(gestor)
         else:
             imprimir_alerta(MENSAJE_ALERTA_OPCION)
