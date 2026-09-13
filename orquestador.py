@@ -7,6 +7,7 @@ from planilla.cli import iniciar_flujo_planillas
 from diario.cli import iniciar_flujo_diario
 from diario.conectores import de_partida_apertura, de_partida_planilla
 from diario.engine import GestorLibroDiario
+from diario.models import TipoOrigenPartida
 from mayor.cli import iniciar_flujo_mayor
 from balance.cli import iniciar_flujo_balance
 from persistencia import (
@@ -202,9 +203,28 @@ def _accion_planillas(gestor: GestorLibroDiario) -> None:
     if planillas:
         _ejercicio_activo.planillas = planillas
 
-    if partida_nomina and pedir_confirmacion("¿Deseas asentar esta Nómina de Sueldos en el Libro Diario?"):
-        partida_diario = de_partida_planilla(partida_nomina, numero=gestor.siguiente_numero)
-        asentar_partida_en_diario(gestor, partida_diario, "Nómina")
+    if partida_nomina:
+        idx_existente = -1
+        partida_existente = None
+        for idx, p in enumerate(gestor.libro.partidas):
+            if p.origen == TipoOrigenPartida.PLANILLA:
+                idx_existente = idx
+                partida_existente = p
+                break
+
+        if partida_existente:
+            mensaje = f"¿Deseas actualizar la Partida No. {partida_existente.numero} de Nómina en el Libro Diario?"
+        else:
+            mensaje = "¿Deseas asentar esta Nómina de Sueldos en el Libro Diario?"
+
+        if pedir_confirmacion(mensaje):
+            num_asiento = partida_existente.numero if partida_existente else gestor.siguiente_numero
+            partida_diario = de_partida_planilla(partida_nomina, numero=num_asiento)
+            if partida_existente:
+                gestor.libro.partidas[idx_existente] = partida_diario
+                imprimir_exito(f"Partida No. {num_asiento} de Nómina actualizada exitosamente en el Libro Diario.")
+            else:
+                asentar_partida_en_diario(gestor, partida_diario, "Nómina")
 
 
 def _accion_salir(gestor: GestorLibroDiario) -> None:

@@ -509,6 +509,67 @@ class TestModularidadOperaciones(unittest.TestCase):
         )
         self.assertTrue(p_base.cuadra)
 
+    def test_crud_partidas_en_gestor(self):
+        """Verifica obtener, actualizar y eliminar partidas con re-correlación automática."""
+        gestor = GestorLibroDiario()
+        p1 = PartidaDiario(
+            numero=1,
+            fecha=date(2026, 1, 1),
+            glosa="Partida 1",
+            lineas=[
+                MovimientoLinea("1101", "Caja General", debe=Decimal("100.00")),
+                MovimientoLinea("3101", "Capital Social", haber=Decimal("100.00")),
+            ],
+        )
+        p2 = PartidaDiario(
+            numero=2,
+            fecha=date(2026, 1, 2),
+            glosa="Partida 2",
+            lineas=[
+                MovimientoLinea("1102", "Bancos", debe=Decimal("200.00")),
+                MovimientoLinea("1101", "Caja General", haber=Decimal("200.00")),
+            ],
+        )
+        p3 = PartidaDiario(
+            numero=3,
+            fecha=date(2026, 1, 3),
+            glosa="Partida 3",
+            lineas=[
+                MovimientoLinea("5101", "Compras de Mercancías", debe=Decimal("300.00")),
+                MovimientoLinea("1102", "Bancos", haber=Decimal("300.00")),
+            ],
+        )
+        gestor.registrar_partida(p1)
+        gestor.registrar_partida(p2)
+        gestor.registrar_partida(p3)
+
+        # 1. Obtener
+        self.assertEqual(gestor.obtener_partida(2).glosa, "Partida 2")
+        self.assertIsNone(gestor.obtener_partida(99))
+
+        # 2. Actualizar
+        p2_nueva = PartidaDiario(
+            numero=2,
+            fecha=date(2026, 1, 2),
+            glosa="Partida 2 Modificada",
+            lineas=[
+                MovimientoLinea("1102", "Bancos", debe=Decimal("250.00")),
+                MovimientoLinea("1101", "Caja General", haber=Decimal("250.00")),
+            ],
+        )
+        gestor.actualizar_partida(2, p2_nueva)
+        self.assertEqual(gestor.obtener_partida(2).glosa, "Partida 2 Modificada")
+        self.assertEqual(gestor.obtener_partida(2).total_debe, Decimal("250.00"))
+
+        # 3. Eliminar con re-correlación
+        exito = gestor.eliminar_partida(2, recorrelacionar=True)
+        self.assertTrue(exito)
+        self.assertEqual(len(gestor.libro.partidas), 2)
+        self.assertEqual(gestor.libro.partidas[0].numero, 1)
+        self.assertEqual(gestor.libro.partidas[0].glosa, "Partida 1")
+        self.assertEqual(gestor.libro.partidas[1].numero, 2)  # La antigua #3 ahora es #2
+        self.assertEqual(gestor.libro.partidas[1].glosa, "Partida 3")
+
 
 if __name__ == "__main__":
     unittest.main()

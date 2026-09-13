@@ -97,6 +97,66 @@ class GestorLibroDiario:
         partidas.append(partida)
         return partida
 
+    def obtener_partida(self, numero: int) -> Optional[PartidaDiario]:
+        """Busca y retorna una partida por su número correlativo."""
+        for p in self.libro.partidas:
+            if p.numero == numero:
+                return p
+        return None
+
+    def actualizar_partida(
+        self,
+        numero: int,
+        nueva_partida: PartidaDiario,
+        validar_catalogo: bool = True,
+    ) -> PartidaDiario:
+        """Actualiza una partida existente asegurando cuadre y validación de catálogo."""
+        idx_encontrado = -1
+        for idx, p in enumerate(self.libro.partidas):
+            if p.numero == numero:
+                idx_encontrado = idx
+                break
+
+        if idx_encontrado == -1:
+            raise CorrelativoError(f"No existe la partida No. {numero} para actualizar.")
+
+        if not nueva_partida.cuadra:
+            raise DescuadrePartidaError(
+                f"La partida No. {numero} a actualizar está descuadrada: "
+                f"Debe = {SIMBOLO_MONEDA}{nueva_partida.total_debe}, "
+                f"Haber = {SIMBOLO_MONEDA}{nueva_partida.total_haber}."
+            )
+
+        if validar_catalogo:
+            for linea in nueva_partida.lineas:
+                if not self.validar_cuenta(linea.codigo):
+                    raise CuentaInvalidaError(
+                        f"La cuenta con código '{linea.codigo.strip()}' ({linea.nombre}) no existe en el Catálogo."
+                    )
+
+        nueva_partida.numero = numero
+        self.libro.partidas[idx_encontrado] = nueva_partida
+        return nueva_partida
+
+    def eliminar_partida(self, numero: int, recorrelacionar: bool = True) -> bool:
+        """Elimina una partida y opcionalmente re-correlaciona las posteriores."""
+        idx_encontrado = -1
+        for idx, p in enumerate(self.libro.partidas):
+            if p.numero == numero:
+                idx_encontrado = idx
+                break
+
+        if idx_encontrado == -1:
+            return False
+
+        del self.libro.partidas[idx_encontrado]
+
+        if recorrelacionar:
+            for i, p in enumerate(self.libro.partidas, start=1):
+                p.numero = i
+
+        return True
+
     def totales(self) -> Tuple[Decimal, Decimal]:
         """Retorna una tupla (Total Debe, Total Haber) acumulada del libro."""
         return self.libro.total_debe, self.libro.total_haber

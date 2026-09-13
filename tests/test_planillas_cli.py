@@ -95,3 +95,56 @@ class TestPlanillasCLI(unittest.TestCase):
         self.assertTrue(callable(planillas.solicitar_datos_empleado))
         self.assertTrue(callable(planillas.flujo_interactivo))
         self.assertTrue(callable(planillas.menu_herramientas_csv))
+
+    @patch("builtins.input", side_effect=["3", "1", "0"])
+    def test_iniciar_flujo_planillas_ver_boletas(self, mock_input):
+        """Verifica que se puedan ver las boletas de las planillas almacenadas."""
+        from planilla.models import ResultadoPlanilla
+        p1 = ResultadoPlanilla(
+            empleado="Juan Perez",
+            departamento="Administración",
+            sueldo_base=Decimal("5000.00"),
+            comisiones=Decimal("0.00"),
+            horas_extras_trabajadas=Decimal("0.00"),
+            sueldo_extraordinario=Decimal("0.00"),
+            bonificacion_ley=Decimal("250.00"),
+            total_afecto_igss=Decimal("5000.00"),
+            total_devengado=Decimal("5250.00"),
+            descuento_igss=Decimal("241.50"),
+            descuento_isr=Decimal("0.00"),
+            prestamos_deudas=Decimal("0.00"),
+            otros_descuentos=Decimal("0.00"),
+            total_descuentos=Decimal("241.50"),
+            liquido_recibir=Decimal("5008.50"),
+        )
+        planillas_res, partida = iniciar_flujo_planillas(planillas_iniciales=[p1])
+        self.assertEqual(len(planillas_res), 1)
+        self.assertIsNotNone(partida)
+
+    @patch("builtins.input", side_effect=["4", "1", "2", "0"])
+    def test_iniciar_flujo_planillas_eliminar_empleado(self, mock_input):
+        """Verifica que se pueda eliminar un empleado de la lista almacenada."""
+        from planilla.models import ResultadoPlanilla
+        p1 = ResultadoPlanilla(
+            empleado="Juan Perez",
+            departamento="Administración",
+            sueldo_base=Decimal("5000.00"),
+            comisiones=Decimal("0.00"),
+            horas_extras_trabajadas=Decimal("0.00"),
+            sueldo_extraordinario=Decimal("0.00"),
+            bonificacion_ley=Decimal("250.00"),
+            total_afecto_igss=Decimal("5000.00"),
+            total_devengado=Decimal("5250.00"),
+            descuento_igss=Decimal("241.50"),
+            descuento_isr=Decimal("0.00"),
+            prestamos_deudas=Decimal("0.00"),
+            otros_descuentos=Decimal("0.00"),
+            total_descuentos=Decimal("241.50"),
+            liquido_recibir=Decimal("5008.50"),
+        )
+        planillas_res, partida = iniciar_flujo_planillas(planillas_iniciales=[p1])
+        self.assertEqual(len(planillas_res), 0)
+
+
+if __name__ == "__main__":
+    unittest.main()

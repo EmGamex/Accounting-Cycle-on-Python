@@ -20,6 +20,7 @@ from ui import (
     formatear_moneda,
     imprimir_alerta,
     imprimir_banner,
+    imprimir_exito,
     imprimir_menu_opciones,
     pedir_confirmacion,
 )
@@ -54,6 +55,189 @@ def _mostrar_libro_diario(gestor: GestorLibroDiario) -> None:
         imprimir_partida_rich(partida)
 
 
+def _mostrar_resumen_partidas_tabla(gestor: GestorLibroDiario, titulo: str = "PARTIDAS REGISTRADAS EN EL LIBRO DIARIO") -> None:
+    """Muestra una tabla compacta con todas las partidas del diario y sus datos clave."""
+    from rich.table import Table
+    from ui.temas import BORDE_TABLA, COLOR_TEXTO
+    from config import FORMATO_FECHA
+
+    tabla = Table(title=f"{titulo} ({len(gestor.libro.partidas)} partidas)", box=BORDE_TABLA)
+    tabla.add_column("No.", justify="right", style="bold cyan", no_wrap=True)
+    tabla.add_column("Fecha", style="dim", no_wrap=True)
+    tabla.add_column("Glosa / Descripción", style=COLOR_TEXTO)
+    tabla.add_column("Origen", style="dim cyan", no_wrap=True)
+    tabla.add_column("Total Debe (Q)", justify="right", style="green", no_wrap=True)
+    tabla.add_column("Total Haber (Q)", justify="right", style="green", no_wrap=True)
+    tabla.add_column("Estado", justify="center", no_wrap=True)
+
+    for p in gestor.libro.partidas:
+        fecha_str = p.fecha.strftime(FORMATO_FECHA) if hasattr(p.fecha, "strftime") else str(p.fecha)
+        glosa_corta = (p.glosa[:40] + "..") if len(p.glosa) > 42 else p.glosa
+        origen_str = p.origen.value if hasattr(p.origen, "value") else str(p.origen)
+        estado = "[green]✓ Cuadra[/green]" if p.cuadra else "[red]✗ Descuadrada[/red]"
+
+        tabla.add_row(
+            str(p.numero),
+            fecha_str,
+            glosa_corta,
+            origen_str,
+            formatear_moneda(p.total_debe),
+            formatear_moneda(p.total_haber),
+            estado,
+        )
+
+    console.print(tabla)
+
+
+def _consultar_partida_por_numero(gestor: GestorLibroDiario) -> None:
+    """Solicita un número correlativo y despliega su partida mostrando previamente el listado."""
+    if not gestor.libro.partidas:
+        imprimir_alerta("El Libro Diario no contiene partidas asentadas.")
+        return
+
+    _mostrar_resumen_partidas_tabla(gestor, "CONSULTA DE PARTIDAS")
+    num_str = input(f"\nNúmero de partida a consultar [1-{gestor.libro.partidas[-1].numero}, Enter para cancelar]: ").strip()
+    if not num_str:
+        return
+    if not num_str.isdigit():
+        imprimir_alerta("Debe ingresar un número válido.")
+        return
+    partida = gestor.obtener_partida(int(num_str))
+    if not partida:
+        imprimir_alerta(f"No existe la Partida No. {num_str}.")
+        return
+    imprimir_partida_rich(partida)
+
+
+def _modificar_partida_existente(gestor: GestorLibroDiario) -> None:
+    """Permite modificar la glosa, fecha o redefinir líneas de una partida existente."""
+    from diario.prompts import buscar_o_seleccionar_cuenta, pedir_fecha, pedir_monto
+    from diario.models import MovimientoLinea, PartidaDiario
+
+    if not gestor.libro.partidas:
+        imprimir_alerta("El Libro Diario no contiene partidas asentadas.")
+        return
+
+    _mostrar_resumen_partidas_tabla(gestor, "MODIFICAR PARTIDA")
+    num_str = input(f"\nNúmero de partida a modificar [1-{gestor.libro.partidas[-1].numero}, Enter para cancelar]: ").strip()
+    if not num_str:
+        return
+    if not num_str.isdigit():
+        imprimir_alerta("Debe ingresar un número válido.")
+        return
+    numero = int(num_str)
+    partida = gestor.obtener_partida(numero)
+    if not partida:
+        imprimir_alerta(f"No existe la Partida No. {numero}.")
+        return
+
+    console.print(f"\n[bold]Partida actual No. {numero}:[/bold]")
+    imprimir_partida_rich(partida)
+
+    console.print("\n¿Qué deseas modificar?")
+    console.print("  [1] Solo la glosa / explicación")
+    console.print("  [2] Solo la fecha")
+    console.print("  [3] Redefinir las líneas contables (Debe / Haber)")
+    console.print("  [4] Modificación completa (Fecha, Glosa y Líneas)")
+    console.print("  [0] Cancelar")
+    op = input("Seleccione opción [1-4, 0]: ").strip()
+
+    if op == "0" or not op:
+        return
+
+    if op == "1":
+        nueva_glosa = input(f"Nueva glosa [{partida.glosa}]: ").strip() or partida.glosa
+        partida.glosa = nueva_glosa
+        imprimir_exito(f"Glosa de la Partida No. {numero} actualizada exitosamente.")
+        imprimir_partida_rich(partida)
+        return
+
+    if op == "2":
+        nueva_fecha = pedir_fecha(f"Nueva fecha [{partida.fecha.isoformat()}]: ")
+        partida.fecha = nueva_fecha
+        imprimir_exito(f"Fecha de la Partida No. {numero} actualizada exitosamente.")
+        imprimir_partida_rich(partida)
+        return
+
+    if op in ("3", "4"):
+        fecha = pedir_fecha(f"Fecha de la partida [{partida.fecha.isoformat()}]: ") if op == "4" else partida.fecha
+        glosa = (input(f"Glosa [{partida.glosa}]: ").strip() or partida.glosa) if op == "4" else partida.glosa
+        doc = partida.documento_soporte
+
+        nueva = PartidaDiario(
+            numero=numero,
+            fecha=fecha,
+            glosa=glosa,
+            origen=partida.origen,
+            documento_soporte=doc,
+        )
+
+        console.print("\n[bold]INGRESO DE NUEVAS LÍNEAS (Escriba 'fin' en el código para terminar)[/bold]")
+        while True:
+            console.print(
+                f"  Estado -> Debe: [green]Q {nueva.total_debe:,.2f}[/green] | "
+                f"Haber: [green]Q {nueva.total_haber:,.2f}[/green] | Diferencia: [yellow]Q {nueva.diferencia:,.2f}[/yellow]"
+            )
+            col = input("  ¿Imputar al Debe [D] o al Haber [H]? (o 'fin' para concluir): ").strip().upper()
+            if col == "FIN":
+                break
+            if col not in ("D", "H"):
+                imprimir_alerta("Opción no válida. Ingrese D para Debe o H para Haber.")
+                continue
+
+            cod, nom = buscar_o_seleccionar_cuenta("  Código o nombre de cuenta", gestor=gestor)
+            monto = pedir_monto(f"  Monto a registrar en el {'DEBE' if col == 'D' else 'HABER'}: Q ")
+
+            if col == "D":
+                nueva.agregar_cargo(cod, nom, monto)
+            else:
+                nueva.agregar_abono(cod, nom, monto)
+
+        if not nueva.lineas:
+            imprimir_alerta("No se ingresaron líneas. Se canceló la modificación.")
+            return
+
+        if not nueva.cuadra:
+            imprimir_alerta(
+                f"La partida no cuadra (Diferencia: Q {nueva.diferencia:,.2f}). "
+                "No se aplicaron los cambios para preservar la integridad contable."
+            )
+            return
+
+        gestor.actualizar_partida(numero, nueva)
+        imprimir_exito(f"Partida No. {numero} modificada y actualizada exitosamente.")
+        imprimir_partida_rich(nueva)
+
+
+def _eliminar_partida_existente(gestor: GestorLibroDiario) -> None:
+    """Permite eliminar un asiento contable y re-correlaciona automáticamente."""
+    if not gestor.libro.partidas:
+        imprimir_alerta("El Libro Diario no contiene partidas asentadas.")
+        return
+
+    _mostrar_resumen_partidas_tabla(gestor, "ELIMINAR / ANULAR PARTIDA")
+    num_str = input(f"\nNúmero de partida a eliminar [1-{gestor.libro.partidas[-1].numero}, Enter para cancelar]: ").strip()
+    if not num_str:
+        return
+    if not num_str.isdigit():
+        imprimir_alerta("Debe ingresar un número válido.")
+        return
+    numero = int(num_str)
+    partida = gestor.obtener_partida(numero)
+    if not partida:
+        imprimir_alerta(f"No existe la Partida No. {numero}.")
+        return
+
+    imprimir_partida_rich(partida)
+    confirmacion = pedir_confirmacion(
+        f"¿Estás seguro de eliminar la Partida No. {numero}? Se re-correlacionarán las siguientes (s/n): ",
+        default=False,
+    )
+    if confirmacion:
+        gestor.eliminar_partida(numero, recorrelacionar=True)
+        imprimir_exito(f"Partida No. {numero} eliminada. Correlativos re-indexados correctamente.")
+
+
 def _obtener_acciones_diario() -> list[AccionMenu]:
     """Define la lista ordenada de operaciones disponibles en el menú."""
     return [
@@ -76,6 +260,18 @@ def _obtener_acciones_diario() -> list[AccionMenu]:
         AccionMenu(
             "Regularizar IVA del Período (Ajuste Débito vs. Crédito Fiscal)",
             regularizar_iva_asistido,
+        ),
+        AccionMenu(
+            "Consultar Partida por Número",
+            _consultar_partida_por_numero,
+        ),
+        AccionMenu(
+            "Modificar Partida Existente (Glosa, Fecha o Líneas)",
+            _modificar_partida_existente,
+        ),
+        AccionMenu(
+            "Eliminar / Anular Partida (Con Re-correlación)",
+            _eliminar_partida_existente,
         ),
         AccionMenu(
             "Ver Libro Diario Completo",
