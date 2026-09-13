@@ -156,8 +156,6 @@ def menu_persistencia(gestor: GestorLibroDiario) -> None:
         acciones[int(op) - 1].accion()
 
 
-_menu_persistencia_core = menu_persistencia
-
 
 # ==============================================================================
 # ACCIONES DEL MENÚ PRINCIPAL

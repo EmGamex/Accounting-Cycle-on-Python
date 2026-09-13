@@ -1,15 +1,15 @@
-"""Pruebas unitarias para el menú orquestador principal main.py."""
+"""Pruebas unitarias para el menú orquestador principal y el lanzador main.py."""
 import io
 import os
 import unittest
 from unittest.mock import patch
 
-from main import menu_principal
+from orquestador import menu_persistencia, menu_principal
 
 
 class TestMainOrquestador(unittest.TestCase):
     def setUp(self):
-        patcher = patch("main.ARCHIVO_EJERCICIO_DEFAULT", "test_no_existe_diario.json")
+        patcher = patch("orquestador.ARCHIVO_EJERCICIO_DEFAULT", "test_no_existe_diario.json")
         self.mock_archivo = patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -30,21 +30,21 @@ class TestMainOrquestador(unittest.TestCase):
         salida = mock_stdout.getvalue()
         self.assertIn("Opción no reconocida. Intente nuevamente.", salida)
 
-    @patch("main.iniciar_flujo_apertura", return_value=(None, None))
+    @patch("orquestador.iniciar_flujo_apertura", return_value=(None, None))
     @patch("builtins.input", side_effect=["1", "0"])
     def test_invocacion_apertura(self, mock_input, mock_apertura):
         """Verifica que la opción 1 invoque el módulo de apertura."""
         menu_principal()
         mock_apertura.assert_called_once()
 
-    @patch("main.iniciar_flujo_planillas", return_value=([], None))
+    @patch("orquestador.iniciar_flujo_planillas", return_value=([], None))
     @patch("builtins.input", side_effect=["2", "0"])
     def test_invocacion_planillas(self, mock_input, mock_planillas):
         """Verifica que la opción 2 invoque el módulo de planillas."""
         menu_principal()
         mock_planillas.assert_called_once()
 
-    @patch("main.iniciar_flujo_diario")
+    @patch("orquestador.iniciar_flujo_diario")
     @patch("builtins.input", side_effect=["3", "0"])
     def test_invocacion_diario(self, mock_input, mock_diario):
         """Verifica que la opción 3 invoque el módulo de libro diario pasando el gestor."""
@@ -52,7 +52,7 @@ class TestMainOrquestador(unittest.TestCase):
         mock_diario.assert_called_once()
         self.assertIn("gestor", mock_diario.call_args.kwargs)
 
-    @patch("main.iniciar_flujo_diario", side_effect=KeyboardInterrupt)
+    @patch("orquestador.iniciar_flujo_diario", side_effect=KeyboardInterrupt)
     @patch("sys.stdout", new_callable=io.StringIO)
     @patch("builtins.input", side_effect=["3", "0"])
     def test_manejo_keyboard_interrupt_submodulo(self, mock_input, mock_stdout, mock_diario):
@@ -61,7 +61,7 @@ class TestMainOrquestador(unittest.TestCase):
         salida = mock_stdout.getvalue()
         self.assertIn("Retornando al menú principal", salida)
 
-    @patch("main.iniciar_flujo_mayor")
+    @patch("orquestador.iniciar_flujo_mayor")
     @patch("builtins.input", side_effect=["4", "0"])
     def test_invocacion_mayor(self, mock_input, mock_mayor):
         """Verifica que la opción 4 invoque el módulo de libro mayor pasando el gestor."""
@@ -69,7 +69,7 @@ class TestMainOrquestador(unittest.TestCase):
         mock_mayor.assert_called_once()
         self.assertIn("gestor_diario", mock_mayor.call_args.kwargs)
 
-    @patch("main.iniciar_flujo_balance")
+    @patch("orquestador.iniciar_flujo_balance")
     @patch("builtins.input", side_effect=["5", "0"])
     def test_invocacion_balance(self, mock_input, mock_balance):
         """Verifica que la opción 5 invoque el módulo de balances pasando el gestor."""
@@ -77,14 +77,14 @@ class TestMainOrquestador(unittest.TestCase):
         mock_balance.assert_called_once()
         self.assertIn("gestor_diario", mock_balance.call_args.kwargs)
 
-    @patch("main.menu_persistencia")
+    @patch("orquestador.menu_persistencia")
     @patch("builtins.input", side_effect=["6", "0"])
     def test_invocacion_persistencia(self, mock_input, mock_persistencia):
         """Verifica que la opción 6 invoque el submenú de persistencia."""
         menu_principal()
         mock_persistencia.assert_called_once()
 
-    @patch("main.iniciar_flujo_apertura")
+    @patch("orquestador.iniciar_flujo_apertura")
     @patch("builtins.input", side_effect=["1", "s", "0", "n"])
     def test_asentar_apertura_en_diario(self, mock_input, mock_apertura):
         """Verifica que la partida de apertura se registre en el Gestor tras confirmar."""
@@ -111,7 +111,7 @@ class TestMainOrquestador(unittest.TestCase):
         self.assertEqual(gestor.libro.partidas[0].glosa, "Partida de Apertura")
         self.assertEqual(gestor.totales(), (Decimal("1000.00"), Decimal("1000.00")))
 
-    @patch("main.iniciar_flujo_planillas")
+    @patch("orquestador.iniciar_flujo_planillas")
     @patch("builtins.input", side_effect=["2", "s", "0", "n"])
     def test_asentar_nomina_en_diario(self, mock_input, mock_planillas):
         """Verifica que la partida de nómina se registre en el Gestor tras confirmar."""
@@ -138,12 +138,11 @@ class TestMainOrquestador(unittest.TestCase):
     def test_menu_persistencia_guardar(self, mock_input):
         """Verifica el guardado desde el submenú de persistencia."""
         import tempfile
-        from main import menu_persistencia
         from diario.engine import GestorLibroDiario
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             test_file = os.path.join(tmp_dir, "test_guardar.json")
-            with patch("main.ARCHIVO_EJERCICIO_DEFAULT", test_file):
+            with patch("orquestador.ARCHIVO_EJERCICIO_DEFAULT", test_file):
                 gestor = GestorLibroDiario()
                 menu_persistencia(gestor)
                 self.assertTrue(os.path.exists(test_file))
@@ -180,13 +179,13 @@ class TestMainOrquestador(unittest.TestCase):
     def test_orquestador_guarda_ejercicio_unificado(self):
         """Verifica que el orquestador guarde en formato unificado de EjercicioContable."""
         import tempfile
-        from main import menu_persistencia
+        from orquestador import menu_persistencia
         from diario.engine import GestorLibroDiario
         from persistencia import cargar_ejercicio_json
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             test_file = os.path.join(tmp_dir, "test_ejercicio_unif.json")
-            with patch("main.ARCHIVO_EJERCICIO_DEFAULT", test_file):
+            with patch("orquestador.ARCHIVO_EJERCICIO_DEFAULT", test_file):
                 gestor = GestorLibroDiario()
                 with patch("builtins.input", side_effect=["1", "0"]):
                     menu_persistencia(gestor)
@@ -194,3 +193,4 @@ class TestMainOrquestador(unittest.TestCase):
                 ej = cargar_ejercicio_json(test_file)
                 self.assertEqual(ej.version, "1.1")
                 self.assertEqual(ej.nombre_empresa, "Empresa Ejemplo, S.A.")
+
