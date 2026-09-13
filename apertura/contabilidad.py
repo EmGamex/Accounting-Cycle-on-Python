@@ -1,6 +1,6 @@
 """Lógica contable pura: consolidación de cuentas, cálculo de balance y partida de diario."""
 from decimal import Decimal
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from apertura.catalogo import normalizar
 from apertura.models import (
@@ -15,12 +15,46 @@ from apertura.models import (
 class MotorApertura:
     """Motor contable sin efectos secundarios de entrada/salida para el proceso de apertura."""
 
-    def __init__(self):
+    def __init__(self, items_iniciales: Optional[List[ItemCuentaApertura]] = None):
         self._items: Dict[str, ItemCuentaApertura] = {}
+        if items_iniciales:
+            self.cargar_items(items_iniciales)
 
     @property
     def items(self) -> List[ItemCuentaApertura]:
         return list(self._items.values())
+
+    def cargar_items(self, items: List[ItemCuentaApertura]) -> None:
+        """Carga una colección de cuentas existentes en la apertura."""
+        for it in items:
+            clave = it.codigo if it.codigo != "S/C" else f"SC_{normalizar(it.nombre)}"
+            self._items[clave] = it
+
+    def modificar_monto(self, clave_o_codigo: str, nuevo_monto: Decimal) -> Optional[ItemCuentaApertura]:
+        """Modifica directamente el importe de una cuenta registrada."""
+        clave_limpia = clave_o_codigo.strip()
+        target_k = None
+        if clave_limpia in self._items:
+            target_k = clave_limpia
+        else:
+            norm = normalizar(clave_limpia)
+            for k, v in self._items.items():
+                if normalizar(v.nombre) == norm or v.codigo == clave_limpia:
+                    target_k = k
+                    break
+
+        if target_k:
+            viejo = self._items[target_k]
+            self._items[target_k] = ItemCuentaApertura(
+                codigo=viejo.codigo,
+                nombre=viejo.nombre,
+                monto=nuevo_monto.quantize(Decimal("0.01")),
+                clase=viejo.clase,
+                subgrupo=viejo.subgrupo,
+                es_regularizadora=viejo.es_regularizadora,
+            )
+            return self._items[target_k]
+        return None
 
     def agregar_o_acumular(
         self,

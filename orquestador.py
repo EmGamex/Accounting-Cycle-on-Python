@@ -164,7 +164,9 @@ _menu_persistencia_core = menu_persistencia
 def _accion_apertura(gestor: GestorLibroDiario) -> None:
     """Ejecuta el flujo de apertura y permite asentarlo en el libro diario."""
     global _ejercicio_activo
-    resumen, partida_apertura = iniciar_flujo_apertura()
+    resumen, partida_apertura = iniciar_flujo_apertura(
+        cuentas_iniciales=_ejercicio_activo.items_apertura
+    )
     if resumen and hasattr(resumen, "estructura_balance"):
         items = []
         for clase, subgrupos in resumen.estructura_balance.items():
@@ -174,15 +176,29 @@ def _accion_apertura(gestor: GestorLibroDiario) -> None:
         if items:
             _ejercicio_activo.items_apertura = items
 
-    if partida_apertura and pedir_confirmacion("¿Deseas asentar esta Apertura como Partida #1 en el Libro Diario?"):
-        partida_diario = de_partida_apertura(partida_apertura, numero=gestor.siguiente_numero)
-        asentar_partida_en_diario(gestor, partida_diario, "Apertura")
+    if partida_apertura:
+        tiene_partida_1 = len(gestor.libro.partidas) > 0 and gestor.libro.partidas[0].numero == 1
+        mensaje = (
+            "¿Deseas actualizar la Partida #1 de Apertura en el Libro Diario?"
+            if tiene_partida_1
+            else "¿Deseas asentar esta Apertura como Partida #1 en el Libro Diario?"
+        )
+        if pedir_confirmacion(mensaje):
+            num_asiento = 1 if tiene_partida_1 else gestor.siguiente_numero
+            partida_diario = de_partida_apertura(partida_apertura, numero=num_asiento)
+            if tiene_partida_1:
+                gestor.libro.partidas[0] = partida_diario
+                imprimir_exito("Partida #1 de Apertura actualizada exitosamente en el Libro Diario.")
+            else:
+                asentar_partida_en_diario(gestor, partida_diario, "Apertura")
 
 
 def _accion_planillas(gestor: GestorLibroDiario) -> None:
     """Ejecuta el flujo de nóminas y permite asentarlo en el libro diario."""
     global _ejercicio_activo
-    planillas, partida_nomina = iniciar_flujo_planillas()
+    planillas, partida_nomina = iniciar_flujo_planillas(
+        planillas_iniciales=_ejercicio_activo.planillas
+    )
     if planillas:
         _ejercicio_activo.planillas = planillas
 

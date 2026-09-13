@@ -1,10 +1,10 @@
 """Capa de presentación e interacción de consola para el sistema de apertura contable."""
 from decimal import Decimal, InvalidOperation
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
-from apertura.catalogo import CatalogoService
+from apertura.catalogo import CatalogoService, normalizar
 from apertura.contabilidad import MotorApertura
-from apertura.models import CuentaCatalogo, PartidaApertura, ResumenBalance
+from apertura.models import CuentaCatalogo, ItemCuentaApertura, PartidaApertura, ResumenBalance
 from config import (
     ARCHIVO_APERTURA_DEFAULT,
     CERO_MONETARIO,
@@ -30,6 +30,7 @@ from ui import (
 MAX_COINCIDENCIAS_MOSTRADAS: int = 8
 COMANDO_FINALIZAR: str = "fin"
 COMANDOS_VER: tuple = ("ver", "listar")
+COMANDOS_MODIFICAR: tuple = ("modificar", "cambiar", "editar")
 COMANDOS_ELIMINAR: tuple = ("eliminar", "borrar", "quitar")
 OPCIONES_CLASIFICACION_RANGO: str = "1-5"
 OPCIONES_CLASIFICACION_VALIDAS: tuple = ("1", "2", "3", "4", "5")
@@ -121,10 +122,26 @@ def resolver_cuenta(catalogo: CatalogoService, entrada: str) -> Optional[CuentaC
 
 
 def procesar_comando_especial(comando: str, motor: MotorApertura) -> bool:
-    """Ejecuta comandos auxiliares de control ('ver', 'eliminar'). Retorna True si fue reconocido."""
+    """Ejecuta comandos auxiliares de control ('ver', 'modificar', 'eliminar'). Retorna True si fue reconocido."""
     cmd = comando.lower()
     if cmd in COMANDOS_VER:
         mostrar_cuentas_registradas(motor)
+        return True
+
+    if cmd in COMANDOS_MODIFICAR:
+        target = input("   Nombre o código de la cuenta a modificar: ").strip()
+        cta_existente = None
+        for it in motor.items:
+            if it.codigo == target or normalizar(it.nombre) == normalizar(target):
+                cta_existente = it
+                break
+        if not cta_existente:
+            imprimir_alerta(f"No se encontró la cuenta '{target}'.")
+            return True
+        nuevo_monto = pedir_monto(cta_existente.nombre)
+        modificado = motor.modificar_monto(target, nuevo_monto)
+        if modificado:
+            imprimir_exito(f"Monto de '{modificado.nombre}' actualizado a {formatear_moneda(modificado.monto)}.")
         return True
 
     if cmd in COMANDOS_ELIMINAR:
@@ -142,9 +159,10 @@ def mostrar_guia_comandos() -> None:
     """Muestra el encabezado y comandos especiales del flujo de apertura."""
     imprimir_banner("SISTEMA DE APERTURA CONTABLE: BALANCE Y PARTIDA DE DIARIO", border_style="cyan")
     console.print("Ingresa el código o nombre de cada cuenta. [bold]Comandos especiales:[/bold]")
-    console.print("  [cyan]'ver'[/cyan]      : Listar cuentas acumuladas")
-    console.print("  [cyan]'eliminar'[/cyan] : Quitar una cuenta")
-    console.print("  [cyan]'fin'[/cyan]      : Finalizar y generar Balance y Partida\n")
+    console.print("  [cyan]'ver'[/cyan]       : Listar cuentas acumuladas")
+    console.print("  [cyan]'modificar'[/cyan] : Cambiar el monto de una cuenta")
+    console.print("  [cyan]'eliminar'[/cyan]  : Quitar una cuenta")
+    console.print("  [cyan]'fin'[/cyan]       : Finalizar y generar Balance y Partida\n")
 
 
 def ajustar_capital_si_procede(motor: MotorApertura, catalogo: CatalogoService, resumen: ResumenBalance) -> ResumenBalance:
@@ -187,6 +205,7 @@ def iniciar_flujo_apertura(
     numero_partida: int = 1,
     exportar_archivo: bool = True,
     imprimir_reportes: bool = True,
+    cuentas_iniciales: Optional[List[ItemCuentaApertura]] = None,
 ) -> Tuple[Optional[ResumenBalance], Optional[PartidaApertura]]:
     """Punto de entrada interactivo principal. Retorna (ResumenBalance, PartidaApertura) o (None, None)."""
     mostrar_guia_comandos()
@@ -197,7 +216,13 @@ def iniciar_flujo_apertura(
         imprimir_alerta(f"{e}")
         return None, None
 
-    motor = MotorApertura()
+    motor = MotorApertura(items_iniciales=cuentas_iniciales)
+
+    if motor.items:
+        imprimir_aviso(
+            f"Se cargaron {len(motor.items)} cuentas de apertura previas del ejercicio.\n"
+            f"   Puedes verlas con 'ver', modificarlas con 'modificar' o añadir más."
+        )
 
     while True:
         entrada = input("\nCuenta, código o comando (o 'fin'): ").strip()
