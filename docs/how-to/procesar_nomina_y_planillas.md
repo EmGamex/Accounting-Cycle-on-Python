@@ -26,10 +26,11 @@ El sistema soporta dos vías para cargar la información de los empleados:
 
 ### Modalidad A: Flujo Interactivo por Consola
 Ideal para empresas pequeñas o liquidaciones rápidas de pocos colaboradores:
-1. Ejecuta:
-   ```powershell
-   python planillas.py
+1. Inicia el orquestador general y selecciona la opción **`[2] Sistema de Planillas y Nóminas`**:
+   ```bash
+   python main.py
    ```
+   *(o ejecuta directamente `python planillas.py`)*.
 2. Selecciona la opción **[1] Ingreso interactivo de empleados**.
 3. El sistema solicitará uno a uno los campos obligatorios y opcionales:
    * Nombre del colaborador.

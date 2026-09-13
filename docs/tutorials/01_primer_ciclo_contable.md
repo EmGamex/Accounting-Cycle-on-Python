@@ -1,17 +1,19 @@
-# Tutorial: Tu Primer Ciclo Contable en 15 Minutos
+﻿# Tutorial: Tu Primer Ciclo Contable Completo en 15 Minutos
 
-Este tutorial te guiará paso a paso para ejecutar un flujo contable básico utilizando la infraestructura de scripts del proyecto: desde registrar la apertura de un negocio comercial hasta liquidar la nómina del primer mes y generar las respectivas partidas contables cuadradas al centavo.
+Este tutorial te guiará paso a paso para ejecutar un **Ciclo Contable Completo e Integrado** utilizando el orquestador interactivo del proyecto ([`main.py`](../../main.py)). 
+
+Aprenderás a registrar la apertura de un negocio, liquidar la planilla de sueldos, asentar ambas operaciones en el Libro Diario, mayorizar automáticamente las cuentas contables y emitir el Balance de Comprobación de 4 Columnas con doble cuadre perfecto.
 
 ---
 
 ## Prerrequisitos
 
 * Tener instalado **Python 3.10** o superior en tu sistema.
-* Estar ubicado en la raíz del repositorio o proyecto:
-  ```powershell
-  cd <directorio_del_proyecto>
+* Entorno virtual activado con las dependencias instaladas:
+  ```bash
+  pip install -r requirements.txt
   ```
-* No se requieren dependencias externas para la lógica central (utiliza exclusivamente la biblioteca estándar: `decimal`, `dataclasses`, `typing`, `csv`).
+* Estar ubicado en la raíz del repositorio.
 
 ---
 
@@ -19,23 +21,41 @@ Este tutorial te guiará paso a paso para ejecutar un flujo contable básico uti
 
 ```mermaid
 flowchart TD
-    Step1["1. Apertura Contable<br/><i>(apertura-cuentas.py)</i>"] --> Out1["Balance de Situación Inicial<br/>+ Partida #1 Cuadrada"]
-    Out1 --> Step2["2. Liquidación de Planilla<br/><i>(planillas.py)</i>"]
-    Step2 --> Out2["Boletas Individuales<br/><i>(IGSS 4.83%, Bonificación Q250)</i>"]
-    Out2 --> Out3["Partida Contable Compuesta<br/><i>(Carga Patronal 12.67%, Bancos)</i>"]
+    MAIN["python main.py<br/><i>(Menú Principal Unificado)</i>"]
+    
+    Step1["Paso 1: Apertura Contable<br/><i>[Opción 1]</i>"] --> P1["Balance Inicial<br/>+ Partida #1"]
+    P1 --> DIA["Libro Diario<br/><i>(Asiento #1 y #2)</i>"]
+    
+    Step2["Paso 2: Nómina y Planilla<br/><i>[Opción 2]</i>"] --> P2["Boletas de Pago<br/>+ Partida #2"]
+    P2 --> DIA
+    
+    DIA --> Step3["Paso 3: Libro Mayor<br/><i>[Opción 4]</i>"]
+    Step3 --> MAY["T-Gráficas Automáticas<br/>y Saldos Continuos"]
+    
+    MAY --> Step4["Paso 4: Balance de 4 Columnas<br/><i>[Opción 5]</i>"]
+    Step4 --> BAL["Comprobación y Saldos<br/>(Doble Cuadre Matemático)"]
 ```
 
 ---
 
-## Paso 1: Ejecutar la Apertura Contable
+## Paso 0: Iniciar el Sistema
 
-El punto de partida de toda empresa es el inventario inicial o Balance de Apertura.
+Ejecuta el orquestador principal:
 
-1. Ejecuta el asistente interactivo de apertura:
-   ```powershell
-   python apertura-cuentas.py
-   ```
-2. El sistema te solicitará ingresar cuentas y sus montos correspondientes. Ingresa el siguiente caso de prueba:
+```bash
+python main.py
+```
+
+El sistema desplegará el banner corporativo y el estado actual del ejercicio (partidas registradas y balance en `Q 0.00`).
+
+---
+
+## Paso 1: Registrar el Balance de Apertura
+
+Selecciona la opción **`[1] Sistema de Apertura Contable (Inventario y Balance Inicial)`**.
+
+1. Elige **`[1] Ingresar cuentas interactivamente`**.
+2. Ingresa los siguientes valores de prueba para constituir la empresa comercial:
    * **Caja General**: `15000`
    * **Bancos (Moneda Nacional)**: `50000`
    * **Inventario de Mercancías**: `35000`
@@ -43,47 +63,25 @@ El punto de partida de toda empresa es el inventario inicial o Balance de Apertu
    * **Proveedores Locales**: `20000`
 3. Escribe `fin` o presiona Enter sin texto cuando termines de capturar las cuentas.
 
-### ¿Qué sucede internamente?
-* El motor valida cada cuenta contra el Catálogo Contable NIIF/SAT ([`catalogo_contable.py`](../../catalogo_contable.py)).
-* Suma los activos ($15,000 + 50,000 + 35,000 + 40,000 = Q 140,000.00$).
+### ¿Qué hace el sistema?
+* Valida las cuentas contra el Catálogo Contable Central ([`catalogo_contable.py`](../../catalogo_contable.py)).
+* Suma los activos ($Q 15,000 + Q 50,000 + Q 35,000 + Q 40,000 = Q 140,000.00$).
 * Suma los pasivos ($Q 20,000.00$).
 * Calcula automáticamente el **Capital Social** por diferencia patrimonial:
   $$\text{Capital} = \text{Activo} - \text{Pasivo} = 140,000 - 20,000 = Q 120,000.00$$
-
-### Resultado Generado
-La consola desplegará el **Balance de Situación General de Apertura** clasificado en Corriente y No Corriente, seguido de la **Partida No. 1** del Libro Diario:
-
-```text
-======================================================================
-                         PARTIDA CONTABLE NO. 1
-                        (Partida de Apertura)
-======================================================================
-Código    Cuenta                                     Debe        Haber
-----------------------------------------------------------------------
-1101      Caja General                          15,000.00         0.00
-1102      Bancos (Moneda Nacional)              50,000.00         0.00
-1104      Inventario de Mercancías              35,000.00         0.00
-1206      Vehículos                             40,000.00         0.00
-2101         A: Proveedores Locales                  0.00    20,000.00
-3101         A: Capital Social                       0.00   120,000.00
-----------------------------------------------------------------------
-SUMAS IGUALES:                                 140,000.00   140,000.00
-[ESTADO]: CUADRADA PERFECTAMENTE (Diferencia: Q0.00)
-======================================================================
-```
+* Muestra la **Partida No. 1** cuadrada a dos columnas ($Q 140,000.00 = Q 140,000.00$).
+* Al salir, el sistema te preguntará:
+  `¿Deseas asentar esta Apertura como Partida #1 en el Libro Diario? (S/n):`
+  **Responde `S` (Sí)** para que se integre al Libro Diario unificado.
 
 ---
 
 ## Paso 2: Procesar la Primera Planilla de Sueldos
 
-Al concluir el primer mes de operaciones, corresponde liquidar el pago de sueldos del personal conforme a la ley laboral de Guatemala.
+Desde el menú principal, selecciona la opción **`[2] Sistema de Planillas y Nóminas (Cálculo de Sueldos y Boletas)`**.
 
-1. Ejecuta el módulo de nómina:
-   ```powershell
-   python planillas.py
-   ```
-2. Selecciona la opción **[1] Ingreso interactivo de empleados**.
-3. Ingresa los datos de dos empleados de ejemplo:
+1. Elige **`[1] Ingreso interactivo de empleados`** (o carga masiva desde `plantilla_empleados.csv`).
+2. Ingresa los datos de dos colaboradores de ejemplo:
 
 #### Empleado 1: Administración
 * **Nombre:** Carlos Morales
@@ -102,59 +100,79 @@ Al concluir el primer mes de operaciones, corresponde liquidar el pago de sueldo
 * **Porcentaje de Comisión:** `3.5`
 * **Préstamos / Anticipos:** `200.00`
 
----
+### Cálculos Legales Automáticos:
+* Horas extras calculadas con recargo legal de $1.5$ sobre la jornada diaria.
+* Bonificación Incentivo legal de **Q250.00** fija por empleado (Decreto 78-89).
+* Deducción de **Cuota Laboral IGSS (4.83%)** sobre ingresos afectos.
+* Provisión de **Cuota Patronal IGSS (12.67%)** a cargo de la empresa.
 
-## Paso 3: Análisis de Cálculos y Boleta de Pago
-
-Para cada empleado, el sistema emite su boleta desglosada:
-* Aplica el valor de hora extra ordinaria con factor $1.5$ sobre la jornada legal.
-* Suma la **Bonificación Incentivo Ley Q250.00** (Decreto 78-89).
-* Deduce la **Cuota Laboral IGSS (4.83%)** sobre el total devengado afecto (excluyendo la bonificación).
-* Calcula la retención proyectada de **ISR asalariados** si aplica.
-
-Ejemplo de boleta emitida:
-```text
-============================================================
-              BOLETA DE PAGO - PLANILLA MENSUAL
-============================================================
-Empleado: Carlos Morales | Depto: Administración
-Sueldo Base:                  Q 5,000.00
-Horas Extras (10.0 hrs):      Q   468.75
-Bonificación Incentivo:       Q   250.00
-------------------------------------------------------------
-TOTAL DEVENGADO:              Q 5,718.75
-(-) Cuota Laboral IGSS (4.83%): Q 264.14
-(-) Retención ISR:            Q   0.00
-------------------------------------------------------------
-LÍQUIDO A RECIBIR:            Q 5,454.61
-============================================================
-```
+Al finalizar, el orquestador preguntará:
+`¿Deseas asentar esta Nómina de Sueldos en el Libro Diario? (S/n):`
+**Responde `S` (Sí)**. Se generará y vinculará la **Partida No. 2** en el Libro Diario.
 
 ---
 
-## Paso 4: Generación del Asiento Contable de Nómina
+## Paso 3: Inspeccionar el Libro Diario
 
-Al finalizar la captura de todos los empleados, el sistema consolida automáticamente la **Partida de Planilla**:
-* **Debe:**
-  * `5201-01` Sueldos de Administración
-  * `5201-02` Bonificación Incentivo Administración
-  * `5201-03` Cuota Patronal Administración ($12.67\%$)
-  * `5202-01` Sueldos Sala de Ventas + Comisiones
-  * `5202-02` Bonificación Incentivo Ventas
-  * `5202-03` Cuota Patronal Ventas ($12.67\%$)
-* **Haber:**
-  * `2104-01` Cuotas IGSS por Pagar (Laboral $4.83\%$ + Patronal $12.67\% = 17.50\%$)
-  * `2104-02` Retención ISR por Pagar
-  * `1111` Anticipos / Descuentos a Empleados
-  * `1102` Bancos (Líquido total a pagar)
+Selecciona la opción **`[3] Sistema de Libro Diario (Registro de Operaciones Diarias)`**.
 
-El sistema verifica que el asiento cuadre con tolerancia cero:
-$$\sum \text{Debe} == \sum \text{Haber}$$
+1. Elige **`[1] Ver Libro Diario completo`**.
+2. Observarás ambas partidas correlativas registradas con sus respectivas sangrías y glosas:
+   * **Partida #1 (Apertura):** Debe $Q 140,000.00$ | Haber $Q 140,000.00$.
+   * **Partida #2 (Planilla):** Cuadrada al centavo con las cuentas de gasto de administración/ventas, cuotas patronales, retenciones y el crédito bancario.
+3. El estado del Diario mostrará:
+   `LIBRO DIARIO CUADRADO PERFECTAMENTE (Diferencia: Q 0.00)`
+4. Presiona `0` para regresar al menú principal.
+
+---
+
+## Paso 4: Mayorizar y Generar T-Gráficas
+
+Selecciona la opción **`[4] Sistema de Libro Mayor y T-Gráficas (Pases y Saldos)`**.
+
+1. Elige **`[1] Ver T-Gráficas en pantalla`**.
+2. El sistema agrupará de forma instantánea todos los movimientos de las Partidas #1 y #2 por cuenta:
+   * **Caja General (1101):** Saldo Deudor $Q 15,000.00$.
+   * **Bancos (1102):** Débito inicial de $Q 50,000.00$ menos el abono por pago de planilla líquida, calculando su nuevo saldo deudor en tiempo real.
+   * **Capital Social (3101):** Saldo Acreedor $Q 120,000.00$.
+   * Cuentas de Gastos y Pasivos laborales desglosadas.
+3. Opcionalmente, puedes exportar las T-Gráficas a disco seleccionando la opción **`[3] Exportar T-Gráficas a archivo de texto`** (se guardará como `t_graficas_mayor.txt`).
+
+---
+
+## Paso 5: Emitir el Balance de 4 Columnas
+
+Selecciona la opción **`[5] Sistema de Balances (4 Columnas y Situación General de Cierre)`**.
+
+1. Elige **`[1] Generar y ver Balance de 4 Columnas`**.
+2. La consola desplegará la matriz formal de comprobación y saldos:
+   * **Columna 1:** Sumas del Debe.
+   * **Columna 2:** Sumas del Haber.
+   * **Columna 3:** Saldos Deudores.
+   * **Columna 4:** Saldos Acreedores.
+3. Al pie de la tabla confirmarás la doble regla de cuadre contable:
+   * **Sumas Iguales:** $\sum Debe == \sum Haber$.
+   * **Saldos Iguales:** $\sum \text{Saldos Deudores} == \sum \text{Saldos Acreedores}$.
+4. Selecciona **`[2] Exportar Balance a archivo de texto`** para conservar el reporte oficial (`balance_4_columnas.txt`).
+
+---
+
+## Paso 6: Guardar el Ejercicio Contable
+
+Regresa al menú principal y presiona **`[0] Salir`** (o entra a `[6] Guardar / Cargar Ejercicio Contable`).
+
+El sistema te preguntará:
+`¿Deseas guardar los cambios en 'libro_diario.json' antes de salir? (S/n):`
+Presiona Enter o escribe `S`.
+
+Todo el estado del ejercicio (empresa, inventario de apertura, partidas del diario, colaboradores y nóminas) quedará persistido de forma segura en `libro_diario.json`, listo para reanudarse en cualquier momento.
 
 ---
 
 ## Siguientes Pasos
 
-¡Has completado tu primer ciclo básico! Ahora puedes consultar:
-* [Cómo Estructurar Partidas en el Libro Diario](../how-to/estructurar_partidas_diario.md) para registrar compras y ventas.
-* [El Ciclo Contable y el Efecto Dominó](../explanation/ciclo_contable_y_partida_doble.md) para entender cómo este asiento se transformará automáticamente en el Libro Mayor y el Balance de 4 Columnas.
+¡Felicitaciones! Has completado el ciclo contable clásico de principio a fin. Para profundizar en operaciones específicas, consulta:
+
+* [Cómo Estructurar Partidas en el Libro Diario](../how-to/estructurar_partidas_diario.md): Registro de compras con IVA crédito y ventas con IVA débito.
+* [Persistencia JSON y Modelo Unificado](../explanation/persistencia_y_modelo_de_datos.md): Cómo funciona la serialización y los respaldos atómicos `.bak`.
+* [El Ciclo Contable y el Efecto Dominó](../explanation/ciclo_contable_y_partida_doble.md): Fundamentación matemática de la mayorización desatendida.

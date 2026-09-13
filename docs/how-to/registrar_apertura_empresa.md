@@ -42,10 +42,13 @@ flowchart LR
 ## 2. Flujo Operativo Paso a Paso
 
 ### Paso 1: Iniciar el Asistente de Apertura
-Ejecuta en tu terminal:
-```powershell
-python apertura-cuentas.py
+Inicia el orquestador general y selecciona la opción **`[1] Sistema de Apertura Contable`**:
+```bash
+python main.py
 ```
+
+> [!NOTE]
+> También puedes acceder de forma directa e independiente mediante `python apertura-cuentas.py`.
 
 ### Paso 2: Ingreso de Cuentas y Normalización
 El sistema cuenta con un motor de búsqueda difusa y normalización de texto. Puedes escribir nombres exactos o variaciones comunes:

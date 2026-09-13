@@ -1,4 +1,4 @@
-# Explicación: Precisión Financiera con Decimal vs Float
+﻿# Explicación: Precisión Financiera con Decimal vs Float
 
 Este artículo detalla la justificación técnica por la cual este sistema prohíbe el uso de tipos de punto flotante nativos (`float`) en Python para operaciones monetarias, y adopta de manera estricta la biblioteca estándar `decimal.Decimal`.
 
@@ -44,24 +44,30 @@ True
 Para asegurar la pureza del cálculo en todo el sistema:
 
 1. **Inicialización Obligatoria como Cadena (`str`):**
-   * ❌ **Incorrecto:** `Decimal(0.1)` — ya introduce el error de precisión del float antes de construir el objeto.
-   * ✅ **Correcto:** `Decimal("0.1")` o `Decimal("1500.50")`.
+   * **Incorrecto:** `Decimal(0.1)` — ya introduce el error de precisión del float antes de construir el objeto.
+   * **Correcto:** `Decimal("0.1")` o `Decimal("1500.50")`.
 
-2. **Redondeo Legal con `ROUND_HALF_UP`:**
-   En Guatemala, los centavos se redondean al entero más próximo, y las fracciones exactamente iguales a $0.5$ se redondean hacia arriba (redondeo escolar / bancario comercial):
+2. **Redondeo Legal con `ROUND_HALF_UP` y Constantes Centralizadas:**
+   En Guatemala, los centavos se redondean al entero más próximo, y las fracciones exactamente iguales a $0.5$ se redondean hacia arriba (redondeo escolar / bancario comercial). En el sistema, esto se apoya en las constantes de [`config.py`](../../config.py):
    ```python
    from decimal import Decimal, ROUND_HALF_UP
+   from config import PRECISION_CENTAVOS, CERO_MONETARIO
 
-   CENTAVO = Decimal("0.01")
-   
-   def money(valor: Decimal) -> Decimal:
-       return valor.quantize(CENTAVO, rounding=ROUND_HALF_UP)
+   # PRECISION_CENTAVOS = Decimal("0.01")
+   # CERO_MONETARIO = Decimal("0.00")
+
+   def redondear_moneda(valor: Decimal) -> Decimal:
+       return valor.quantize(PRECISION_CENTAVOS, rounding=ROUND_HALF_UP)
    ```
 
 3. **Cálculo de Porcentajes:**
-   Al calcular el IGSS laboral ($4.83\%$), se opera:
+   Al calcular retenciones e impuestos (como el IGSS laboral $4.83\%$), se utilizan las constantes configuradas:
    ```python
-   cuota_igss = money(total_afecto * Decimal("0.0483"))
+   from config import TASA_IGSS_LABORAL  # Decimal("0.0483")
+
+   cuota_igss = (total_afecto * TASA_IGSS_LABORAL).quantize(
+       PRECISION_CENTAVOS, rounding=ROUND_HALF_UP
+   )
    ```
    Garantizando que el resultado sea siempre un múltiplo exacto de `0.01` Quetzales.
 
