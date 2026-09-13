@@ -24,6 +24,7 @@ from ui import (
     imprimir_exito,
     imprimir_menu_clasificacion,
     imprimir_resumen_balance_apertura,
+    pedir_confirmacion,
 )
 
 # Constantes de control y límites visuales específicas de apertura
@@ -34,14 +35,6 @@ COMANDOS_MODIFICAR: tuple = ("modificar", "cambiar", "editar")
 COMANDOS_ELIMINAR: tuple = ("eliminar", "borrar", "quitar")
 OPCIONES_CLASIFICACION_RANGO: str = "1-5"
 OPCIONES_CLASIFICACION_VALIDAS: tuple = ("1", "2", "3", "4", "5")
-
-
-def pedir_confirmacion(mensaje: str, default: bool = False) -> bool:
-    """Solicita una confirmación sí/no estandarizada al usuario."""
-    resp = input(mensaje).strip().lower()
-    if not resp:
-        return default
-    return resp in RESPUESTAS_AFIRMATIVAS
 
 
 def pedir_monto(cuenta_nombre: str) -> Decimal:

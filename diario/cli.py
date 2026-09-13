@@ -62,24 +62,33 @@ def _mostrar_resumen_partidas_tabla(gestor: GestorLibroDiario, titulo: str = "PA
     console.print(tabla)
 
 
-def _consultar_partida_por_numero(gestor: GestorLibroDiario) -> None:
-    """Solicita un número correlativo y despliega su partida mostrando previamente el listado."""
+def _seleccionar_partida_interactiva(gestor: GestorLibroDiario, accion_nombre: str) -> Optional[Any]:
+    """Muestra el resumen de partidas y solicita de forma estandarizada seleccionar una partida."""
     if not gestor.libro.partidas:
         imprimir_alerta("El Libro Diario no contiene partidas asentadas.")
-        return
+        return None
 
-    _mostrar_resumen_partidas_tabla(gestor, "CONSULTA DE PARTIDAS")
-    num_str = input(f"\nNúmero de partida a consultar [1-{gestor.libro.partidas[-1].numero}, Enter para cancelar]: ").strip()
+    _mostrar_resumen_partidas_tabla(gestor, f"{accion_nombre.upper()} PARTIDA")
+    max_num = gestor.libro.partidas[-1].numero
+    num_str = input(f"\nNúmero de partida a {accion_nombre.lower()} [1-{max_num}, Enter para cancelar]: ").strip()
     if not num_str:
-        return
+        return None
     if not num_str.isdigit():
         imprimir_alerta("Debe ingresar un número válido.")
-        return
-    partida = gestor.obtener_partida(int(num_str))
+        return None
+    numero = int(num_str)
+    partida = gestor.obtener_partida(numero)
     if not partida:
-        imprimir_alerta(f"No existe la Partida No. {num_str}.")
-        return
-    imprimir_partida_rich(partida)
+        imprimir_alerta(f"No existe la Partida No. {numero}.")
+        return None
+    return partida
+
+
+def _consultar_partida_por_numero(gestor: GestorLibroDiario) -> None:
+    """Solicita un número correlativo y despliega su partida mostrando previamente el listado."""
+    partida = _seleccionar_partida_interactiva(gestor, "consultar")
+    if partida:
+        imprimir_partida_rich(partida)
 
 
 def _modificar_partida_existente(gestor: GestorLibroDiario) -> None:
@@ -87,22 +96,10 @@ def _modificar_partida_existente(gestor: GestorLibroDiario) -> None:
     from diario.prompts import buscar_o_seleccionar_cuenta, pedir_fecha, pedir_monto
     from diario.models import MovimientoLinea, PartidaDiario
 
-    if not gestor.libro.partidas:
-        imprimir_alerta("El Libro Diario no contiene partidas asentadas.")
-        return
-
-    _mostrar_resumen_partidas_tabla(gestor, "MODIFICAR PARTIDA")
-    num_str = input(f"\nNúmero de partida a modificar [1-{gestor.libro.partidas[-1].numero}, Enter para cancelar]: ").strip()
-    if not num_str:
-        return
-    if not num_str.isdigit():
-        imprimir_alerta("Debe ingresar un número válido.")
-        return
-    numero = int(num_str)
-    partida = gestor.obtener_partida(numero)
+    partida = _seleccionar_partida_interactiva(gestor, "modificar")
     if not partida:
-        imprimir_alerta(f"No existe la Partida No. {numero}.")
         return
+    numero = partida.numero
 
     console.print(f"\n[bold]Partida actual No. {numero}:[/bold]")
     imprimir_partida_rich(partida)
@@ -185,22 +182,10 @@ def _modificar_partida_existente(gestor: GestorLibroDiario) -> None:
 
 def _eliminar_partida_existente(gestor: GestorLibroDiario) -> None:
     """Permite eliminar un asiento contable y re-correlaciona automáticamente."""
-    if not gestor.libro.partidas:
-        imprimir_alerta("El Libro Diario no contiene partidas asentadas.")
-        return
-
-    _mostrar_resumen_partidas_tabla(gestor, "ELIMINAR / ANULAR PARTIDA")
-    num_str = input(f"\nNúmero de partida a eliminar [1-{gestor.libro.partidas[-1].numero}, Enter para cancelar]: ").strip()
-    if not num_str:
-        return
-    if not num_str.isdigit():
-        imprimir_alerta("Debe ingresar un número válido.")
-        return
-    numero = int(num_str)
-    partida = gestor.obtener_partida(numero)
+    partida = _seleccionar_partida_interactiva(gestor, "eliminar")
     if not partida:
-        imprimir_alerta(f"No existe la Partida No. {numero}.")
         return
+    numero = partida.numero
 
     imprimir_partida_rich(partida)
     confirmacion = pedir_confirmacion(
