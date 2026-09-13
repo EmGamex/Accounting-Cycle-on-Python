@@ -4,8 +4,9 @@ from datetime import date
 from decimal import Decimal
 from enum import Enum
 from typing import List, Optional, Set
+from config import PRECISION_CENTAVOS
 
-TWO_PLACES = Decimal("0.01")
+TWO_PLACES = PRECISION_CENTAVOS
 
 
 class TipoOrigenPartida(str, Enum):

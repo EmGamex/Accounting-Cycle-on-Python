@@ -1,15 +1,14 @@
 """Motor de reglas, correlativos y validación del Libro Diario."""
 from collections import defaultdict
 from decimal import Decimal
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import catalogo_contable
-from config import FORMATO_FECHA, SIMBOLO_MONEDA
+from config import CERO_MONETARIO, FORMATO_FECHA, SIMBOLO_MONEDA
 from .exceptions import CorrelativoError, CuentaInvalidaError, DescuadrePartidaError, FechaInvalidaError
 from .models import LibroDiario, MovimientoLinea, PartidaDiario
 from .storage import cargar_libro_json, guardar_libro_json
 
-# Constantes del dominio del Libro Diario para control de correlativos
 CORRELATIVO_INICIAL: int = 1
 CORRELATIVO_MINIMO_VALIDO: int = 1
 
@@ -97,6 +96,89 @@ class GestorLibroDiario:
         partidas.append(partida)
         return partida
 
+    def obtener_partida(self, numero: int) -> Optional[PartidaDiario]:
+        """Busca y retorna una partida por su número correlativo."""
+        for p in self.libro.partidas:
+            if p.numero == numero:
+                return p
+        return None
+
+    def actualizar_partida(
+        self,
+        numero: int,
+        nueva_partida: PartidaDiario,
+        validar_catalogo: bool = True,
+    ) -> PartidaDiario:
+        """Actualiza una partida existente asegurando cuadre y validación de catálogo."""
+        idx_encontrado = -1
+        for idx, p in enumerate(self.libro.partidas):
+            if p.numero == numero:
+                idx_encontrado = idx
+                break
+
+        if idx_encontrado == -1:
+            raise CorrelativoError(f"No existe la partida No. {numero} para actualizar.")
+
+        if not nueva_partida.cuadra:
+            raise DescuadrePartidaError(
+                f"La partida No. {numero} a actualizar está descuadrada: "
+                f"Debe = {SIMBOLO_MONEDA}{nueva_partida.total_debe}, "
+                f"Haber = {SIMBOLO_MONEDA}{nueva_partida.total_haber}."
+            )
+
+        if validar_catalogo:
+            for linea in nueva_partida.lineas:
+                if not self.validar_cuenta(linea.codigo):
+                    raise CuentaInvalidaError(
+                        f"La cuenta con código '{linea.codigo.strip()}' ({linea.nombre}) no existe en el Catálogo."
+                    )
+
+        nueva_partida.numero = numero
+        self.libro.partidas[idx_encontrado] = nueva_partida
+        return nueva_partida
+
+    def eliminar_partida(self, numero: int, recorrelacionar: bool = True) -> bool:
+        """Elimina una partida y opcionalmente re-correlaciona las posteriores."""
+        idx_encontrado = -1
+        for idx, p in enumerate(self.libro.partidas):
+            if p.numero == numero:
+                idx_encontrado = idx
+                break
+
+        if idx_encontrado == -1:
+            return False
+
+        del self.libro.partidas[idx_encontrado]
+
+        if recorrelacionar:
+            for i, p in enumerate(self.libro.partidas, start=1):
+                p.numero = i
+
+        return True
+
+    def mover_partida(self, origen: int, destino: int) -> bool:
+        """Mueve una partida del correlativo origen al destino y re-indexa la secuencia."""
+        total = len(self.libro.partidas)
+        if not (1 <= origen <= total) or not (1 <= destino <= total):
+            return False
+
+        if origen == destino:
+            return True
+
+        partida = self.libro.partidas.pop(origen - 1)
+        self.libro.partidas.insert(destino - 1, partida)
+
+        for i, p in enumerate(self.libro.partidas, start=1):
+            p.numero = i
+
+        return True
+
+    def ordenar_partidas_cronologicamente(self) -> None:
+        """Ordena todas las partidas por fecha ascendente de forma estable y re-indexa correlativos."""
+        self.libro.partidas.sort(key=lambda p: p.fecha)
+        for i, p in enumerate(self.libro.partidas, start=1):
+            p.numero = i
+
     def totales(self) -> Tuple[Decimal, Decimal]:
         """Retorna una tupla (Total Debe, Total Haber) acumulada del libro."""
         return self.libro.total_debe, self.libro.total_haber
@@ -116,7 +198,7 @@ class GestorLibroDiario:
     def totales_por_cuenta(self) -> Dict[str, Dict[str, Decimal]]:
         """Calcula en O(N) la sumatoria acumulada de Debe y Haber agrupada por cuenta."""
         resumen: Dict[str, Dict[str, Decimal]] = defaultdict(
-            lambda: {"debe": Decimal("0.00"), "haber": Decimal("0.00")}
+            lambda: {"debe": CERO_MONETARIO, "haber": CERO_MONETARIO}
         )
         for partida in self.libro.partidas:
             for linea in partida.lineas:
@@ -134,6 +216,32 @@ class GestorLibroDiario:
             for l in p.lineas
             if termino == l.codigo.lower() or termino in l.nombre.lower()
         ]
+
+    def obtener_saldos_iva(self) -> Tuple[Decimal, Decimal]:
+        """Calcula los saldos netos actuales de Crédito Fiscal (1107) y Débito Fiscal (2105).
+
+        Crédito Fiscal (Activo): Debe - Haber
+        Débito Fiscal (Pasivo): Haber - Debe
+
+        Returns:
+            Tupla (saldo_credito, saldo_debito).
+        """
+        totales = self.totales_por_cuenta()
+        cod_credito = catalogo_contable.Cuenta.IVA_CREDITO.value
+        cod_debito = catalogo_contable.Cuenta.IVA_DEBITO.value
+
+        mov_credito = totales.get(cod_credito, {"debe": CERO_MONETARIO, "haber": CERO_MONETARIO})
+        mov_debito = totales.get(cod_debito, {"debe": CERO_MONETARIO, "haber": CERO_MONETARIO})
+
+        saldo_credito = mov_credito["debe"] - mov_credito["haber"]
+        saldo_debito = mov_debito["haber"] - mov_debito["debe"]
+
+        return max(CERO_MONETARIO, saldo_credito), max(CERO_MONETARIO, saldo_debito)
+
+    def puede_regularizar_iva(self) -> bool:
+        """Determina si ambas cuentas de IVA cuentan con saldo positivo compensable."""
+        credito, debito = self.obtener_saldos_iva()
+        return credito > CERO_MONETARIO and debito > CERO_MONETARIO
 
     def guardar_json(self, ruta_archivo: str) -> None:
         """Persiste el libro actual en formato JSON."""

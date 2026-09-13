@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """Componente especializado en renderizar el Catálogo Contable como un Tree jerárquico."""
 from typing import Optional
 from rich.tree import Tree

@@ -6,6 +6,7 @@ from .integraciones import (
     registrar_apertura_asistida,
     registrar_nomina_asistida,
 )
+from .fiscal import regularizar_iva_asistido
 from .libre import registrar_partida_libre_asistida
 from .tesoreria import (
     OPERACIONES_SIMPLES_MAP,
@@ -31,6 +32,7 @@ __all__ = [
     "registrar_venta_asistida",
     "registrar_operacion_simple_asistida",
     "registrar_partida_libre_asistida",
+    "regularizar_iva_asistido",
     # Modelos y utilidades
     "DistribucionPago",
     "guardar_y_mostrar_partida",

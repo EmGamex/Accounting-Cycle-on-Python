@@ -180,6 +180,55 @@ class TestAperturaContable(unittest.TestCase):
         opcion = pedir_clasificacion_manual("Cuenta Desconocida")
         self.assertEqual(opcion, "1")
 
+    def test_motor_apertura_items_iniciales_y_modificar(self):
+        """Verifica que MotorApertura precargue cuentas y permita modificar montos directamente."""
+        from apertura.models import ItemCuentaApertura
+        item_inicial = ItemCuentaApertura(
+            codigo="1101",
+            nombre="Caja General",
+            monto=Decimal("5000.00"),
+            clase="1. Activo",
+            subgrupo="1.1 Activo Corriente",
+        )
+        motor = MotorApertura(items_iniciales=[item_inicial])
+        self.assertEqual(len(motor.items), 1)
+        self.assertEqual(motor.items[0].monto, Decimal("5000.00"))
+
+        # Modificar monto directamente
+        actualizado = motor.modificar_monto("1101", Decimal("7500.00"))
+        self.assertIsNotNone(actualizado)
+        self.assertEqual(actualizado.monto, Decimal("7500.00"))
+        self.assertEqual(motor.items[0].monto, Decimal("7500.00"))
+
+    @patch("builtins.input", side_effect=[
+        "modificar",
+        "1101",
+        "9000.00",
+        "fin",
+        "s",  # Cuadrar capital
+        "n",  # No exportar txt
+    ])
+    def test_iniciar_flujo_apertura_con_cuentas_iniciales(self, mock_input):
+        """Verifica que iniciar_flujo_apertura precargue las cuentas y permita modificarlas interactivamente."""
+        from apertura.cli import iniciar_flujo_apertura
+        from apertura.models import ItemCuentaApertura
+
+        item_caja = ItemCuentaApertura(
+            codigo="1101",
+            nombre="Caja General",
+            monto=Decimal("5000.00"),
+            clase="1. Activo",
+            subgrupo="1.1 Activo Corriente",
+        )
+        resumen, partida = iniciar_flujo_apertura(
+            numero_partida=1,
+            exportar_archivo=False,
+            imprimir_reportes=False,
+            cuentas_iniciales=[item_caja],
+        )
+        self.assertIsNotNone(partida)
+        self.assertEqual(partida.total_debe, Decimal("9000.00"))
+
 
 if __name__ == "__main__":
     unittest.main()

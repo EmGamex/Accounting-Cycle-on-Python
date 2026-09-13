@@ -1,4 +1,4 @@
-﻿"""Pruebas unitarias para el renderizado y exportación de T-Gráficas y Libro Mayor."""
+"""Pruebas unitarias para el renderizado y exportación de T-Gráficas y Libro Mayor."""
 from datetime import date
 from decimal import Decimal
 import os

@@ -1,4 +1,4 @@
-﻿"""Módulo de reporte del Libro Mayor formal a 3 columnas."""
+"""Módulo de reporte del Libro Mayor formal a 3 columnas."""
 from typing import List
 
 from mayor.models import CuentaMayor, LibroMayor, NaturalezaSaldo

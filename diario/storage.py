@@ -71,7 +71,9 @@ def libro_a_dict(libro: LibroDiario) -> Dict[str, Any]:
 
 
 def libro_de_dict(data: Dict[str, Any]) -> LibroDiario:
-    """Reconstruye un LibroDiario a partir de un diccionario."""
+    """Reconstruye un LibroDiario a partir de un diccionario (compatible con formato plano y unificado)."""
+    if "libro_diario" in data and isinstance(data["libro_diario"], dict):
+        data = data["libro_diario"]
     partidas = [partida_de_dict(p) for p in data.get("partidas", [])]
     return LibroDiario(partidas=partidas)
 

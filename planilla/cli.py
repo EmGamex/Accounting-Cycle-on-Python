@@ -40,13 +40,35 @@ class AccionMenu(NamedTuple):
     accion: Callable[[], Any]
 
 
-def flujo_interactivo() -> List[ResultadoPlanilla]:
-    """Captura secuencial de empleados desde la consola."""
-    planillas: List[ResultadoPlanilla] = []
+def flujo_interactivo(planillas_existentes: Optional[List[ResultadoPlanilla]] = None) -> List[ResultadoPlanilla]:
+    """Captura secuencial de empleados desde la consola con control de duplicados."""
+    planillas: List[ResultadoPlanilla] = list(planillas_existentes) if planillas_existentes else []
     while True:
         datos = solicitar_datos_interactivo()
+        nombre_norm = datos.nombre.strip().lower()
+
+        idx_existente = -1
+        for idx, p in enumerate(planillas):
+            if p.empleado.strip().lower() == nombre_norm:
+                idx_existente = idx
+                break
+
+        if idx_existente != -1:
+            confirmar = input(f"\nEl empleado '{datos.nombre}' ya existe en la nómina. ¿Deseas sobrescribir sus datos? (s/n) [s]: ").strip().lower()
+            if confirmar not in RESPUESTAS_AFIRMATIVAS and confirmar != "":
+                console.print("[yellow]Ingreso cancelado para este empleado.[/yellow]")
+                continuar = input("\n¿Deseas ingresar otro empleado? (s/n): ").strip().lower()
+                if continuar not in RESPUESTAS_AFIRMATIVAS or not continuar:
+                    break
+                continue
+
         resultado = calcular_boleta(datos)
-        planillas.append(resultado)
+        if idx_existente != -1:
+            planillas[idx_existente] = resultado
+            imprimir_exito(f"Empleado '{datos.nombre}' actualizado en la planilla.")
+        else:
+            planillas.append(resultado)
+
         imprimir_boleta(resultado)
 
         continuar = input("\n¿Deseas ingresar otro empleado? (s/n): ").strip().lower()
@@ -170,11 +192,72 @@ def menu_herramientas_csv(planillas_actuales: List[ResultadoPlanilla]) -> List[R
     return contenedor[0]
 
 
+def _mostrar_resumen_boletas_accion(planillas_almacenadas: List[ResultadoPlanilla]) -> None:
+    """Muestra una tabla de resumen con todos los empleados y permite ver boletas individuales."""
+    if not planillas_almacenadas:
+        imprimir_alerta("No hay planillas registradas.")
+        return
+
+    from ui import generar_tabla_resumen_planillas
+    tabla = generar_tabla_resumen_planillas(planillas_almacenadas)
+    console.print(tabla)
+
+    sel = input("\nIngrese el número de empleado para ver su boleta completa (o Enter para volver): ").strip()
+    if sel.isdigit() and 1 <= int(sel) <= len(planillas_almacenadas):
+        imprimir_boleta(planillas_almacenadas[int(sel) - 1])
+
+
+def _modificar_o_eliminar_empleado_accion(
+    planillas_almacenadas: List[ResultadoPlanilla],
+) -> Optional[Any]:
+    """Permite modificar o eliminar un empleado registrado en la nómina."""
+    if not planillas_almacenadas:
+        imprimir_alerta("No hay empleados registrados en la planilla.")
+        return None
+
+    from ui import generar_tabla_resumen_planillas
+    tabla = generar_tabla_resumen_planillas(planillas_almacenadas)
+    console.print(tabla)
+
+    sel = input(f"\nSeleccione el número de empleado a gestionar [1-{len(planillas_almacenadas)}, 0 para cancelar]: ").strip()
+    if not sel.isdigit() or int(sel) < 1 or int(sel) > len(planillas_almacenadas):
+        return None
+
+    idx_target = int(sel) - 1
+    emp_actual = planillas_almacenadas[idx_target]
+
+    console.print(f"\nGestión para: [bold cyan]{emp_actual.empleado}[/bold cyan]")
+    console.print("  [1] Reingresar / Modificar datos del empleado")
+    console.print("  [2] Eliminar empleado de la nómina")
+    console.print("  [0] Cancelar")
+
+    op = input("Seleccione opción [1-2, 0]: ").strip()
+    if op == "1":
+        console.print(f"\nReingrese los datos actualizados para {emp_actual.empleado}:")
+        datos = solicitar_datos_interactivo()
+        nuevo_res = calcular_boleta(datos)
+        planillas_almacenadas[idx_target] = nuevo_res
+        imprimir_exito(f"Empleado '{nuevo_res.empleado}' modificado exitosamente.")
+        imprimir_boleta(nuevo_res)
+    elif op == "2":
+        eliminado = planillas_almacenadas.pop(idx_target)
+        imprimir_exito(f"Empleado '{eliminado.empleado}' eliminado de la nómina.")
+
+    if planillas_almacenadas:
+        partida = generar_partida_contable(planillas_almacenadas)
+        imprimir_partida(partida)
+        return partida
+    return None
+
+
 def _obtener_acciones_planillas(
     planillas_almacenadas: List[ResultadoPlanilla],
     on_ingreso_interactivo: Callable[[], None],
     on_herramientas_csv: Callable[[], None],
     on_ver_partida: Callable[[], None],
+    on_ver_boletas: Callable[[], None],
+    on_modificar_empleado: Callable[[], None],
+    on_vaciar_planilla: Callable[[], None],
 ) -> List[AccionMenu]:
     """Construye las acciones principales de planillas según su posición de índice."""
     acciones = [
@@ -182,7 +265,10 @@ def _obtener_acciones_planillas(
         AccionMenu("Herramientas CSV (Carga / Plantilla / Exportación)", on_herramientas_csv),
     ]
     if planillas_almacenadas:
+        acciones.append(AccionMenu(f"Ver lista de empleados y boletas ({len(planillas_almacenadas)} registrados)", on_ver_boletas))
+        acciones.append(AccionMenu("Modificar o eliminar empleado de la nómina", on_modificar_empleado))
         acciones.append(AccionMenu("Ver partida contable consolidada", on_ver_partida))
+        acciones.append(AccionMenu("Vaciar / Reiniciar planilla actual", on_vaciar_planilla))
     return acciones
 
 
@@ -195,9 +281,13 @@ def iniciar_flujo_planillas(
 
     imprimir_banner("SISTEMA DE PLANILLAS Y PARTIDAS CONTABLES (GUATEMALA)", border_style="cyan")
 
+    if planillas_almacenadas:
+        imprimir_aviso(f"Se cargaron {len(planillas_almacenadas)} boleta(s) de nómina previas del ejercicio.")
+
     def accion_ingreso() -> None:
         nonlocal ultima_partida
-        nuevas = flujo_interactivo()
+        nuevas = flujo_interactivo(planillas_existentes=planillas_almacenadas)
+        planillas_almacenadas.clear()
         planillas_almacenadas.extend(nuevas)
         if planillas_almacenadas:
             console.print(f"\nSe han acumulado [cyan]{len(planillas_almacenadas)}[/cyan] planilla(s) en total.")
@@ -217,12 +307,33 @@ def iniciar_flujo_planillas(
             ultima_partida = generar_partida_contable(planillas_almacenadas)
             imprimir_partida(ultima_partida)
 
+    def accion_boletas() -> None:
+        _mostrar_resumen_boletas_accion(planillas_almacenadas)
+
+    def accion_modificar() -> None:
+        nonlocal ultima_partida
+        resultado_partida = _modificar_o_eliminar_empleado_accion(planillas_almacenadas)
+        if resultado_partida is not None:
+            ultima_partida = resultado_partida
+        elif not planillas_almacenadas:
+            ultima_partida = None
+
+    def accion_vaciar() -> None:
+        nonlocal ultima_partida
+        if pedir_confirmacion("¿Estás seguro de vaciar todos los empleados de la planilla actual? (s/n): ", default=False):
+            planillas_almacenadas.clear()
+            ultima_partida = None
+            imprimir_exito("Planilla vaciada exitosamente.")
+
     while True:
         acciones = _obtener_acciones_planillas(
             planillas_almacenadas=planillas_almacenadas,
             on_ingreso_interactivo=accion_ingreso,
             on_herramientas_csv=accion_csv,
             on_ver_partida=accion_partida,
+            on_ver_boletas=accion_boletas,
+            on_modificar_empleado=accion_modificar,
+            on_vaciar_planilla=accion_vaciar,
         )
 
         opciones = [(str(idx), item.descripcion) for idx, item in enumerate(acciones, start=1)]

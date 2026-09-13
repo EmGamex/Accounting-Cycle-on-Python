@@ -6,7 +6,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
-from config import SIMBOLO_MONEDA
+from config import RESPUESTAS_AFIRMATIVAS, SIMBOLO_MONEDA
 from ui.temas import (
     BORDE_PANEL,
     COLOR_ATENUADO,
@@ -27,6 +27,15 @@ def obtener_ancho_consola(min_ancho: int = 40, max_ancho: int = 80) -> int:
     """Retorna un ancho seguro adaptado al terminal actual (especialmente en móviles con Termux)."""
     ancho = console.width
     return max(min_ancho, min(ancho, max_ancho))
+
+
+def pedir_confirmacion(mensaje: str, default: bool = True) -> bool:
+    """Solicita confirmación afirmativa o negativa al usuario de forma centralizada."""
+    sufijo = " [s]: " if default else " [n]: "
+    resp = input(f"\n{mensaje} (s/n){sufijo}").strip().lower()
+    if default:
+        return resp in RESPUESTAS_AFIRMATIVAS
+    return resp in ("s", "si", "y", "yes")
 
 
 def formatear_moneda(monto: Decimal) -> str:

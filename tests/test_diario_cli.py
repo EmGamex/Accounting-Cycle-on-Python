@@ -210,6 +210,126 @@ class TestDiarioCliYAsistentes(unittest.TestCase):
         self.assertIsNone(partida)
         self.assertEqual(len(gestor.libro.partidas), 0)
 
+    @patch("builtins.input", side_effect=["1"])
+    def test_consultar_partida_por_numero(self, mock_input):
+        from diario.cli import _consultar_partida_por_numero
+        from diario.models import MovimientoLinea, PartidaDiario
+        gestor = GestorLibroDiario(estricto_cronologico=False)
+        p = PartidaDiario(
+            numero=1,
+            fecha=date(2026, 1, 1),
+            glosa="Asiento 1",
+            lineas=[
+                MovimientoLinea("1101", "Caja", debe=Decimal("100.00")),
+                MovimientoLinea("1102", "Bancos", haber=Decimal("100.00")),
+            ],
+        )
+        gestor.registrar_partida(p)
+        # Consultar partida existente sin error
+        _consultar_partida_por_numero(gestor)
+
+    @patch("builtins.input", side_effect=["1", "1", "Glosa Modificada"])
+    def test_modificar_glosa_partida(self, mock_input):
+        from diario.cli import _modificar_partida_existente
+        from diario.models import MovimientoLinea, PartidaDiario
+        gestor = GestorLibroDiario(estricto_cronologico=False)
+        p = PartidaDiario(
+            numero=1,
+            fecha=date(2026, 1, 1),
+            glosa="Asiento Original",
+            lineas=[
+                MovimientoLinea("1101", "Caja", debe=Decimal("100.00")),
+                MovimientoLinea("1102", "Bancos", haber=Decimal("100.00")),
+            ],
+        )
+        gestor.registrar_partida(p)
+        _modificar_partida_existente(gestor)
+        self.assertEqual(gestor.obtener_partida(1).glosa, "Glosa Modificada")
+
+    @patch("builtins.input", side_effect=["1", "s"])
+    def test_eliminar_partida_existente_con_recorrelacion(self, mock_input):
+        from diario.cli import _eliminar_partida_existente
+        from diario.models import MovimientoLinea, PartidaDiario
+        gestor = GestorLibroDiario(estricto_cronologico=False)
+        p1 = PartidaDiario(
+            numero=1,
+            fecha=date(2026, 1, 1),
+            glosa="Asiento 1",
+            lineas=[
+                MovimientoLinea("1101", "Caja", debe=Decimal("100.00")),
+                MovimientoLinea("1102", "Bancos", haber=Decimal("100.00")),
+            ],
+        )
+        p2 = PartidaDiario(
+            numero=2,
+            fecha=date(2026, 1, 2),
+            glosa="Asiento 2",
+            lineas=[
+                MovimientoLinea("1101", "Caja", debe=Decimal("50.00")),
+                MovimientoLinea("1102", "Bancos", haber=Decimal("50.00")),
+            ],
+        )
+        gestor.registrar_partida(p1)
+        gestor.registrar_partida(p2)
+
+        _eliminar_partida_existente(gestor)
+        self.assertEqual(len(gestor.libro.partidas), 1)
+        # La partida 2 debió re-correlacionarse a 1
+        self.assertEqual(gestor.libro.partidas[0].numero, 1)
+        self.assertEqual(gestor.libro.partidas[0].glosa, "Asiento 2")
+
+    @patch("builtins.input", side_effect=["2", "1"])
+    def test_mover_partida_posicion_cli(self, mock_input):
+        from diario.cli import _mover_partida_posicion
+        from diario.models import MovimientoLinea, PartidaDiario
+        gestor = GestorLibroDiario(estricto_cronologico=False)
+        p1 = PartidaDiario(1, date(2026, 1, 1), "Asiento 1", [
+            MovimientoLinea("1101", "Caja", debe=Decimal("100.00")),
+            MovimientoLinea("1102", "Bancos", haber=Decimal("100.00")),
+        ])
+        p2 = PartidaDiario(2, date(2026, 1, 2), "Asiento 2", [
+            MovimientoLinea("1101", "Caja", debe=Decimal("50.00")),
+            MovimientoLinea("1102", "Bancos", haber=Decimal("50.00")),
+        ])
+        gestor.registrar_partida(p1)
+        gestor.registrar_partida(p2)
+
+        _mover_partida_posicion(gestor)
+        # El Asiento 2 ahora debe ser la Partida No. 1
+        self.assertEqual(gestor.libro.partidas[0].numero, 1)
+        self.assertEqual(gestor.libro.partidas[0].glosa, "Asiento 2")
+        self.assertEqual(gestor.libro.partidas[1].numero, 2)
+        self.assertEqual(gestor.libro.partidas[1].glosa, "Asiento 1")
+
+    @patch("builtins.input", side_effect=["s"])
+    def test_ordenar_cronologicamente_interactivo_cli(self, mock_input):
+        from diario.cli import _ordenar_cronologicamente_interactivo
+        from diario.models import MovimientoLinea, PartidaDiario
+        gestor = GestorLibroDiario(estricto_cronologico=False)
+        p1 = PartidaDiario(1, date(2026, 1, 20), "Operacion Tardia", [
+            MovimientoLinea("1101", "Caja", debe=Decimal("10.00")),
+            MovimientoLinea("1102", "Bancos", haber=Decimal("10.00")),
+        ])
+        p2 = PartidaDiario(2, date(2026, 1, 5), "Operacion Temprana", [
+            MovimientoLinea("1101", "Caja", debe=Decimal("20.00")),
+            MovimientoLinea("1102", "Bancos", haber=Decimal("20.00")),
+        ])
+        gestor.registrar_partida(p1)
+        gestor.registrar_partida(p2)
+
+        _ordenar_cronologicamente_interactivo(gestor)
+        self.assertEqual(gestor.libro.partidas[0].numero, 1)
+        self.assertEqual(gestor.libro.partidas[0].glosa, "Operacion Temprana")
+        self.assertEqual(gestor.libro.partidas[1].numero, 2)
+        self.assertEqual(gestor.libro.partidas[1].glosa, "Operacion Tardia")
+
+    @patch("builtins.input", side_effect=["1", "0", "0"])
+    def test_navegacion_submenus_diario(self, mock_input):
+        gestor = GestorLibroDiario(estricto_cronologico=False)
+        # Debe entrar a Operaciones (1), volver con 0 y salir con 0
+        iniciar_flujo_diario(gestor)
+        self.assertEqual(len(gestor.libro.partidas), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

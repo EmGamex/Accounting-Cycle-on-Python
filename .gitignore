@@ -233,4 +233,7 @@ temp_*
 temp_test_*
 *.tmp
 *.state
+*.bak
+*.json.bak
+*.log
 

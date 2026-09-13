@@ -7,7 +7,14 @@ from planilla.cli import iniciar_flujo_planillas
 from diario.cli import iniciar_flujo_diario
 from diario.conectores import de_partida_apertura, de_partida_planilla
 from diario.engine import GestorLibroDiario
+from diario.models import TipoOrigenPartida
 from mayor.cli import iniciar_flujo_mayor
+from balance.cli import iniciar_flujo_balance
+from persistencia import (
+    EjercicioContable,
+    cargar_ejercicio_json,
+    guardar_ejercicio_json,
+)
 from config import (
     ARCHIVO_EJERCICIO_DEFAULT as CFG_ARCHIVO_EJERCICIO_DEFAULT,
     MENSAJE_ALERTA_OPCION as CFG_MENSAJE_ALERTA_OPCION,
@@ -15,6 +22,7 @@ from config import (
     RESPUESTAS_AFIRMATIVAS as CFG_RESPUESTAS_AFIRMATIVAS,
 )
 from ui import (
+    COLOR_SECUNDARIO,
     console,
     formatear_moneda,
     imprimir_alerta,
@@ -22,6 +30,8 @@ from ui import (
     imprimir_banner,
     imprimir_estado_ejercicio as ui_imprimir_estado_ejercicio,
     imprimir_exito,
+    imprimir_menu_opciones,
+    pedir_confirmacion as ui_pedir_confirmacion,
 )
 
 # Constantes de configuración y presentación (con alias para compatibilidad y patching en tests)
@@ -39,9 +49,8 @@ class AccionMenu(NamedTuple):
 
 def _mostrar_opciones_con_indices(acciones: list[AccionMenu], texto_salir: str = "Volver / Salir") -> None:
     """Imprime una lista de acciones numeradas secuencialmente y la opción de salida."""
-    for idx, item in enumerate(acciones, start=1):
-        console.print(f"  [bold cyan][{idx}][/bold cyan] {item.descripcion}")
-    console.print(f"  [bold dim][{OPCION_SALIR}][/bold dim] {texto_salir}")
+    opciones = [(str(idx), item.descripcion) for idx, item in enumerate(acciones, start=1)]
+    imprimir_menu_opciones(opciones, texto_salir=texto_salir, salir_codigo=OPCION_SALIR)
 
 
 # ==============================================================================
@@ -49,12 +58,8 @@ def _mostrar_opciones_con_indices(acciones: list[AccionMenu], texto_salir: str =
 # ==============================================================================
 
 def pedir_confirmacion(mensaje: str, default: bool = True) -> bool:
-    """Solicita confirmación afirmativa o negativa al usuario."""
-    sufijo = " [s]: " if default else " [n]: "
-    resp = input(f"\n{mensaje} (s/n){sufijo}").strip().lower()
-    if default:
-        return resp in RESPUESTAS_AFIRMATIVAS
-    return resp in ("s", "si", "y", "yes")
+    """Solicita confirmación afirmativa o negativa al usuario de forma centralizada."""
+    return ui_pedir_confirmacion(mensaje, default=default)
 
 
 def asentar_partida_en_diario(gestor: GestorLibroDiario, partida_diario, tipo_nombre: str) -> None:
@@ -63,17 +68,36 @@ def asentar_partida_en_diario(gestor: GestorLibroDiario, partida_diario, tipo_no
     imprimir_exito(f"Partida #{partida_diario.numero} de {tipo_nombre} asentada en el Libro Diario.")
 
 
+_ejercicio_activo: EjercicioContable = EjercicioContable()
+
+
 def _guardar_ejercicio(gestor: GestorLibroDiario, ruta: str) -> None:
-    """Guarda las partidas del gestor en el archivo JSON especificado."""
-    gestor.guardar_json(ruta)
-    imprimir_exito(f"Ejercicio guardado exitosamente ({len(gestor.libro.partidas)} partidas).")
+    """Guarda las partidas del gestor y el estado del ejercicio en el archivo JSON especificado."""
+    global _ejercicio_activo
+    _ejercicio_activo.libro_diario = gestor.libro
+    guardar_ejercicio_json(_ejercicio_activo, ruta)
+    cant_partidas = len(gestor.libro.partidas)
+    cant_apertura = len(_ejercicio_activo.items_apertura)
+    cant_planillas = len(_ejercicio_activo.planillas)
+    imprimir_exito(
+        f"Ejercicio guardado exitosamente ({cant_partidas} partidas, "
+        f"{cant_apertura} cuentas apertura, {cant_planillas} planillas)."
+    )
 
 
 def _cargar_ejercicio(gestor: GestorLibroDiario, ruta: str) -> None:
-    """Carga las partidas desde el archivo JSON si existe."""
+    """Carga el ejercicio desde el archivo JSON si existe."""
     if os.path.exists(ruta):
-        gestor.cargar_json(ruta)
-        imprimir_exito(f"Ejercicio cargado exitosamente ({len(gestor.libro.partidas)} partidas activas).")
+        global _ejercicio_activo
+        _ejercicio_activo = cargar_ejercicio_json(ruta)
+        gestor.libro = _ejercicio_activo.libro_diario
+        cant_partidas = len(gestor.libro.partidas)
+        cant_apertura = len(_ejercicio_activo.items_apertura)
+        cant_planillas = len(_ejercicio_activo.planillas)
+        imprimir_exito(
+            f"Ejercicio cargado exitosamente ({cant_partidas} partidas activas, "
+            f"{cant_apertura} cuentas apertura, {cant_planillas} planillas)."
+        )
     else:
         imprimir_alerta(f"No se encontró el archivo '{ruta}'.")
 
@@ -82,8 +106,7 @@ def _guardar_personalizado(gestor: GestorLibroDiario) -> None:
     """Solicita ruta de destino y guarda el ejercicio."""
     ruta = input("Ruta o nombre del archivo JSON de destino: ").strip()
     if ruta:
-        gestor.guardar_json(ruta)
-        imprimir_exito(f"Ejercicio guardado exitosamente en '{ruta}'.")
+        _guardar_ejercicio(gestor, ruta)
 
 
 def _cargar_personalizado(gestor: GestorLibroDiario) -> None:
@@ -121,7 +144,7 @@ def _obtener_acciones_persistencia(gestor: GestorLibroDiario) -> list[AccionMenu
 
 def menu_persistencia(gestor: GestorLibroDiario) -> None:
     """Submenú para guardar o cargar el ejercicio contable en formato JSON."""
-    imprimir_banner("GESTIÓN Y PERSISTENCIA DEL EJERCICIO (JSON)", border_style="blue")
+    imprimir_banner("GESTIÓN Y PERSISTENCIA DEL EJERCICIO (JSON)", border_style=COLOR_SECUNDARIO)
 
     acciones = _obtener_acciones_persistencia(gestor)
     _mostrar_opciones_con_indices(acciones, texto_salir="Volver al menú principal")
@@ -142,18 +165,67 @@ _menu_persistencia_core = menu_persistencia
 
 def _accion_apertura(gestor: GestorLibroDiario) -> None:
     """Ejecuta el flujo de apertura y permite asentarlo en el libro diario."""
-    _, partida_apertura = iniciar_flujo_apertura()
-    if partida_apertura and pedir_confirmacion("¿Deseas asentar esta Apertura como Partida #1 en el Libro Diario?"):
-        partida_diario = de_partida_apertura(partida_apertura, numero=gestor.siguiente_numero)
-        asentar_partida_en_diario(gestor, partida_diario, "Apertura")
+    global _ejercicio_activo
+    resumen, partida_apertura = iniciar_flujo_apertura(
+        cuentas_iniciales=_ejercicio_activo.items_apertura
+    )
+    if resumen and hasattr(resumen, "estructura_balance"):
+        items = []
+        for clase, subgrupos in resumen.estructura_balance.items():
+            for subgrupo, cuentas in subgrupos.items():
+                for cod, it in cuentas.items():
+                    items.append(it)
+        if items:
+            _ejercicio_activo.items_apertura = items
+
+    if partida_apertura:
+        tiene_partida_1 = len(gestor.libro.partidas) > 0 and gestor.libro.partidas[0].numero == 1
+        mensaje = (
+            "¿Deseas actualizar la Partida #1 de Apertura en el Libro Diario?"
+            if tiene_partida_1
+            else "¿Deseas asentar esta Apertura como Partida #1 en el Libro Diario?"
+        )
+        if pedir_confirmacion(mensaje):
+            num_asiento = 1 if tiene_partida_1 else gestor.siguiente_numero
+            partida_diario = de_partida_apertura(partida_apertura, numero=num_asiento)
+            if tiene_partida_1:
+                gestor.libro.partidas[0] = partida_diario
+                imprimir_exito("Partida #1 de Apertura actualizada exitosamente en el Libro Diario.")
+            else:
+                asentar_partida_en_diario(gestor, partida_diario, "Apertura")
 
 
 def _accion_planillas(gestor: GestorLibroDiario) -> None:
     """Ejecuta el flujo de nóminas y permite asentarlo en el libro diario."""
-    _, partida_nomina = iniciar_flujo_planillas()
-    if partida_nomina and pedir_confirmacion("¿Deseas asentar esta Nómina de Sueldos en el Libro Diario?"):
-        partida_diario = de_partida_planilla(partida_nomina, numero=gestor.siguiente_numero)
-        asentar_partida_en_diario(gestor, partida_diario, "Nómina")
+    global _ejercicio_activo
+    planillas, partida_nomina = iniciar_flujo_planillas(
+        planillas_iniciales=_ejercicio_activo.planillas
+    )
+    if planillas:
+        _ejercicio_activo.planillas = planillas
+
+    if partida_nomina:
+        idx_existente = -1
+        partida_existente = None
+        for idx, p in enumerate(gestor.libro.partidas):
+            if p.origen == TipoOrigenPartida.PLANILLA:
+                idx_existente = idx
+                partida_existente = p
+                break
+
+        if partida_existente:
+            mensaje = f"¿Deseas actualizar la Partida No. {partida_existente.numero} de Nómina en el Libro Diario?"
+        else:
+            mensaje = "¿Deseas asentar esta Nómina de Sueldos en el Libro Diario?"
+
+        if pedir_confirmacion(mensaje):
+            num_asiento = partida_existente.numero if partida_existente else gestor.siguiente_numero
+            partida_diario = de_partida_planilla(partida_nomina, numero=num_asiento)
+            if partida_existente:
+                gestor.libro.partidas[idx_existente] = partida_diario
+                imprimir_exito(f"Partida No. {num_asiento} de Nómina actualizada exitosamente en el Libro Diario.")
+            else:
+                asentar_partida_en_diario(gestor, partida_diario, "Nómina")
 
 
 def _accion_salir(gestor: GestorLibroDiario) -> None:
@@ -162,8 +234,7 @@ def _accion_salir(gestor: GestorLibroDiario) -> None:
         pregunta = f"¿Deseas guardar los cambios en '{ARCHIVO_EJERCICIO_DEFAULT}' antes de salir?"
         if pedir_confirmacion(pregunta):
             try:
-                gestor.guardar_json(ARCHIVO_EJERCICIO_DEFAULT)
-                imprimir_exito(f"Ejercicio guardado exitosamente en '{ARCHIVO_EJERCICIO_DEFAULT}'.")
+                _guardar_ejercicio(gestor, ARCHIVO_EJERCICIO_DEFAULT)
             except Exception as e:
                 imprimir_alerta(f"Error al guardar ejercicio: {e}")
     console.print("\n[bold green]¡Gracias por utilizar el Sistema Contable Integral! Hasta pronto.[/bold green]")
@@ -201,6 +272,10 @@ def _obtener_acciones_principales(gestor: GestorLibroDiario) -> list[AccionMenu]
             lambda: iniciar_flujo_mayor(gestor_diario=gestor),
         ),
         AccionMenu(
+            "Sistema de Balances (4 Columnas y Situación General de Cierre)",
+            lambda: iniciar_flujo_balance(gestor_diario=gestor),
+        ),
+        AccionMenu(
             "Guardar / Cargar Ejercicio Contable (Persistencia JSON)",
             lambda: menu_persistencia(gestor),
         ),
@@ -211,15 +286,27 @@ def _obtener_acciones_principales(gestor: GestorLibroDiario) -> list[AccionMenu]
 # ORQUESTADOR PRINCIPAL
 # ==============================================================================
 
-def menu_principal(gestor: Optional[GestorLibroDiario] = None) -> None:
+def menu_principal(
+    gestor: Optional[GestorLibroDiario] = None,
+    ejercicio: Optional[EjercicioContable] = None,
+) -> None:
     """Orquestador interactivo para la ejecución de módulos del ciclo contable con estado unificado."""
+    global _ejercicio_activo
+    if ejercicio is not None:
+        _ejercicio_activo = ejercicio
+
     if gestor is None:
         gestor = GestorLibroDiario(estricto_cronologico=False)
         if os.path.exists(ARCHIVO_EJERCICIO_DEFAULT):
             try:
-                gestor.cargar_json(ARCHIVO_EJERCICIO_DEFAULT)
+                _ejercicio_activo = cargar_ejercicio_json(ARCHIVO_EJERCICIO_DEFAULT)
+                gestor.libro = _ejercicio_activo.libro_diario
             except Exception:
                 pass
+        else:
+            _ejercicio_activo.libro_diario = gestor.libro
+    else:
+        _ejercicio_activo.libro_diario = gestor.libro
 
     _imprimir_banner_principal()
 
