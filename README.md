@@ -47,7 +47,7 @@ La documentación completa del proyecto está organizada bajo el marco **Diátax
 - **[Tutoriales](docs/tutorials/)**: [Tu Primer Ciclo Contable en 15 Minutos](docs/tutorials/01_primer_ciclo_contable.md) (guía paso a paso desde apertura hasta nómina).
 - **[Guías Prácticas](docs/how-to/)**: [Apertura de Empresa](docs/how-to/registrar_apertura_empresa.md) | [Procesamiento de Planillas](docs/how-to/procesar_nomina_y_planillas.md) | [Partidas de Diario](docs/how-to/estructurar_partidas_diario.md) | [Extender Catálogo](docs/how-to/extender_catalogo_cuentas.md).
 - **[Referencia Técnica](docs/reference/)**: [Catálogo NIIF/SAT](docs/reference/catalogo_cuentas.md) | [Modelos de Datos](docs/reference/modelos_y_dataclasses.md) | [Tasas y Leyes de Guatemala](docs/reference/legislacion_y_tasas_guatemala.md).
-- **[Explicación y Arquitectura](docs/explanation/)**: [Ciclo Contable y Partida Doble](docs/explanation/ciclo_contable_y_partida_doble.md) | [Precisión Decimal](docs/explanation/precision_decimal_financiera.md) | [Diseño Modular del Sistema](docs/explanation/arquitectura_del_sistema.md).
+- **[Explicación y Arquitectura](docs/explanation/)**: [Arquitectura Modular](docs/explanation/arquitectura_del_sistema.md) | [Partida Doble y Mayor](docs/explanation/ciclo_contable_y_partida_doble.md) | [Precisión Decimal](docs/explanation/precision_decimal_financiera.md) | [Persistencia JSON](docs/explanation/persistencia_y_modelo_de_datos.md) | [Motor Fiscal](docs/explanation/motor_fiscal_guatemala.md).
 
 ---
 

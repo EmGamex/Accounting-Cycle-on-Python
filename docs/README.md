@@ -1,4 +1,4 @@
-# Centro de Documentación — Sistema Contable Automatizado
+﻿# Centro de Documentación — Sistema Contable Automatizado
 
 Bienvenido a la documentación oficial del **Sistema Contable Automatizado**, una suite modular desarrollada en Python para la gestión completa del Ciclo Contable bajo el marco legal y tributario de **Guatemala** (Código de Comercio, SAT, IGSS y NIIF para PYMES).
 
@@ -10,14 +10,14 @@ Esta documentación está estructurada bajo el **Marco Diátaxis**, separando si
 flowchart TD
     subgraph OrientacionAprendizaje ["▲ ORIENTADO AL APRENDIZAJE"]
         direction LR
-        T["📘 TUTORIALES<br/><i>(Aprender paso a paso)</i><br/>• 01. Tu Primer Ciclo Contable"]
-        E["💡 EXPLICACIÓN<br/><i>(Entender conceptos y arquitectura)</i><br/>• Ciclo Contable y Partida Doble<br/>• Precisión Decimal vs Float<br/>• Arquitectura Modular"]
+        T["TUTORIALES<br/><i>(Aprender paso a paso)</i><br/>• 01. Tu Primer Ciclo Contable"]
+        E["EXPLICACIÓN<br/><i>(Entender conceptos y arquitectura)</i><br/>• Ciclo Contable y Partida Doble<br/>• Precisión Decimal vs Float<br/>• Arquitectura Modular<br/>• Persistencia y Modelo JSON<br/>• Motor Fiscal Guatemala"]
     end
 
     subgraph OrientacionInformacion ["▼ ORIENTADO A LA INFORMACIÓN"]
         direction LR
-        H["🛠️ GUÍAS HOW-TO<br/><i>(Resolver un problema concreto)</i><br/>• Apertura de Empresa<br/>• Procesar Nóminas<br/>• Estructurar Partidas de Diario<br/>• Extender Catálogo"]
-        R["📖 REFERENCIA<br/><i>(Diccionario técnico y normativo)</i><br/>• Catálogo de Cuentas NIIF/SAT<br/>• Modelos y Dataclasses<br/>• Legislación y Tasas Guatemala"]
+        H["GUÍAS HOW-TO<br/><i>(Resolver un problema concreto)</i><br/>• Apertura de Empresa<br/>• Procesar Nóminas<br/>• Estructurar Partidas de Diario<br/>• Extender Catálogo"]
+        R["REFERENCIA<br/><i>(Diccionario técnico y normativo)</i><br/>• Catálogo de Cuentas NIIF/SAT<br/>• Modelos y Dataclasses<br/>• Legislación y Tasas Guatemala"]
     end
 
     T <===>|Práctico  ◀─────────▶  Teórico| E
@@ -55,14 +55,16 @@ flowchart LR
 ### 3. [Referencia Técnica (Reference)](reference/)
 *Descripciones técnicas, diccionarios de datos y parámetros legales.*
 * **[Catálogo de Cuentas NIIF/SAT](reference/catalogo_cuentas.md)**: Nomenclatura completa, códigos, nombres y clasificación por clase/subgrupo.
-* **[Modelos y Dataclasses](reference/modelos_y_dataclasses.md)**: Estructuras de datos fuertemente tipadas (`apertura.models`, `planilla.models`).
+* **[Modelos y Dataclasses](reference/modelos_y_dataclasses.md)**: Estructuras de datos fuertemente tipadas (`apertura.models`, `planilla.models`, `diario.models`, `persistencia.models`).
 * **[Legislación y Parámetros Fiscales de Guatemala](reference/legislacion_y_tasas_guatemala.md)**: Porcentajes vigentes de IGSS (4.83% y 12.67%), Bonificación Q250.00, IVA 12% y retención ISR.
 
 ### 4. [Explicación y Arquitectura (Explanation)](explanation/)
 *Artículos de fondo para comprender los fundamentos teóricos y de diseño.*
+* **[Arquitectura y Diseño Modular del Software](explanation/arquitectura_del_sistema.md)**: Visión global de subsistemas, arquitectura en capas, reportes y hoja de ruta Excel.
 * **[El Ciclo Contable y el Efecto Dominó](explanation/ciclo_contable_y_partida_doble.md)**: Cómo el Diario genera automáticamente el Mayor, las T-Gráficas y el Balance de 4 Columnas.
 * **[Precisión Financiera con Decimal](explanation/precision_decimal_financiera.md)**: Por qué se prohíbe el uso de `float` y cómo se garantiza la precisión al centavo.
-* **[Arquitectura y Diseño Modular del Software](explanation/arquitectura_del_sistema.md)**: Visión global de subsistemas, contratos entre módulos y exportación a Excel.
+* **[Persistencia JSON, Snapshots y Modelo Unificado](explanation/persistencia_y_modelo_de_datos.md)**: Serialización estructurada, compatibilidad de esquemas y atomicidad con backups.
+* **[Fundamentos del Motor Fiscal y Laboral de Guatemala](explanation/motor_fiscal_guatemala.md)**: Mecánica del IVA (crédito/débito) y provisiones mensuales legales (Aguinaldo, Bono 14, Indemnización).
 
 ---
 
@@ -72,6 +74,6 @@ flowchart LR
 | :--- | :--- | :---: | :--- | :--- |
 | **1. Apertura** | `apertura/` | Activo | Inventario / Aportaciones | Balance de Situación Inicial y Partida #1 |
 | **2. Nómina** | `planilla/` | Activo | Datos de Empleados / Horas | Boletas de Pago y Partida Contable |
-| **3. Diario** | `diario/` | En diseño | Partidas de Apertura, Nómina y Operativas | Libro Diario oficial a 2 columnas |
-| **4. Mayor** | `mayor/` | En diseño | Asientos del Libro Diario | T-Gráficas y Mayor agrupado por cuenta |
-| **5. Balances** | `balance/` | En diseño | Saldos del Libro Mayor | Balance de 4 Columnas y Balance General |
+| **3. Diario** | `diario/` | Activo | Partidas de Apertura, Nómina y Operativas | Libro Diario oficial a 2 columnas |
+| **4. Mayor** | `mayor/` | Activo | Asientos del Libro Diario | T-Gráficas y Mayor agrupado por cuenta |
+| **5. Balances** | `balance/` | Activo | Saldos del Libro Mayor | Balance de 4 Columnas y Balance General |
