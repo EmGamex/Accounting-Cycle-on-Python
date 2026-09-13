@@ -66,10 +66,39 @@ def generar_tabla_partida(
 
 
 def imprimir_partida_rich(partida: Any, console_obj=None, titulo_personalizado: Optional[str] = None) -> None:
-    """Imprime en consola una partida contable con Rich."""
     c = console_obj or console
     tabla = generar_tabla_partida(partida, titulo_personalizado=titulo_personalizado)
     c.print(tabla)
+
+
+def generar_tabla_resumen_partidas(partidas: Sequence[Any], titulo: str = "PARTIDAS REGISTRADAS EN EL LIBRO DIARIO") -> Table:
+    """Genera una tabla compacta y estilizada con Rich para listar partidas contables."""
+    tabla = Table(title=f"{titulo} ({len(partidas)} partidas)", box=BORDE_TABLA)
+    tabla.add_column("No.", justify="right", style=COLOR_PRIMARIO, no_wrap=True)
+    tabla.add_column("Fecha", style="dim", no_wrap=True)
+    tabla.add_column("Glosa / Descripción", style=COLOR_TEXTO)
+    tabla.add_column("Origen", style=COLOR_SECUNDARIO, no_wrap=True)
+    tabla.add_column(f"Total Debe ({SIMBOLO_MONEDA})", justify="right", style="green", no_wrap=True)
+    tabla.add_column(f"Total Haber ({SIMBOLO_MONEDA})", justify="right", style="green", no_wrap=True)
+    tabla.add_column("Estado", justify="center", no_wrap=True)
+
+    for p in partidas:
+        fecha_str = p.fecha.strftime(FORMATO_FECHA) if hasattr(p.fecha, "strftime") else str(p.fecha)
+        glosa_corta = (p.glosa[:40] + "..") if len(p.glosa) > 42 else p.glosa
+        origen_str = p.origen.value if hasattr(p.origen, "value") else str(p.origen)
+        estado = "[green]✓ Cuadra[/green]" if getattr(p, "cuadra", False) else "[red]✗ Descuadrada[/red]"
+
+        tabla.add_row(
+            str(p.numero),
+            fecha_str,
+            glosa_corta,
+            origen_str,
+            formatear_moneda(p.total_debe),
+            formatear_moneda(p.total_haber),
+            estado,
+        )
+
+    return tabla
 
 
 def generar_tabla_sumas_y_saldos(mayor: Any) -> Table:
@@ -219,6 +248,31 @@ def generar_tabla_boleta(r: Any) -> Table:
         if mostrar:
             estilo = "bold cyan" if "TOTAL" in etiqueta or "LÍQUIDO" in etiqueta else "white"
             tabla.add_row(f"[{estilo}]{etiqueta}[/{estilo}]", formatear_moneda(monto))
+
+    return tabla
+
+
+def generar_tabla_resumen_planillas(planillas: Sequence[Any]) -> Table:
+    """Genera la tabla de resumen consolidado de nómina para Rich."""
+    tabla = Table(title=f"NÓMINA DE SUELDOS ({len(planillas)} empleados)", box=BORDE_TABLA)
+    tabla.add_column("No.", justify="right", style="dim", no_wrap=True)
+    tabla.add_column("Empleado", style=COLOR_PRIMARIO)
+    tabla.add_column("Departamento", style=COLOR_TEXTO)
+    tabla.add_column(f"Devengado ({SIMBOLO_MONEDA})", justify="right", style="green", no_wrap=True)
+    tabla.add_column(f"IGSS Lab ({SIMBOLO_MONEDA})", justify="right", style="yellow", no_wrap=True)
+    tabla.add_column(f"Descuentos ({SIMBOLO_MONEDA})", justify="right", style="red", no_wrap=True)
+    tabla.add_column(f"Líquido a Recibir ({SIMBOLO_MONEDA})", justify="right", style=COLOR_EXITO, no_wrap=True)
+
+    for idx, p in enumerate(planillas, start=1):
+        tabla.add_row(
+            str(idx),
+            p.empleado,
+            p.departamento,
+            formatear_moneda(p.total_devengado),
+            formatear_moneda(p.descuento_igss),
+            formatear_moneda(p.total_descuentos),
+            formatear_moneda(p.liquido_recibir),
+        )
 
     return tabla
 

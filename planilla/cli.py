@@ -198,30 +198,8 @@ def _mostrar_resumen_boletas_accion(planillas_almacenadas: List[ResultadoPlanill
         imprimir_alerta("No hay planillas registradas.")
         return
 
-    from rich.table import Table
-    from ui.temas import BORDE_TABLA, COLOR_TEXTO
-    from ui import formatear_moneda
-
-    tabla = Table(title=f"NÓMINA DE SUELDOS ({len(planillas_almacenadas)} empleados)", box=BORDE_TABLA)
-    tabla.add_column("No.", justify="right", style="dim", no_wrap=True)
-    tabla.add_column("Empleado", style="bold cyan")
-    tabla.add_column("Departamento", style=COLOR_TEXTO)
-    tabla.add_column("Devengado (Q)", justify="right", style="green", no_wrap=True)
-    tabla.add_column("IGSS Lab (Q)", justify="right", style="yellow", no_wrap=True)
-    tabla.add_column("Descuentos (Q)", justify="right", style="red", no_wrap=True)
-    tabla.add_column("Líquido a Recibir (Q)", justify="right", style="bold green", no_wrap=True)
-
-    for idx, p in enumerate(planillas_almacenadas, start=1):
-        tabla.add_row(
-            str(idx),
-            p.empleado,
-            p.departamento,
-            formatear_moneda(p.total_devengado),
-            formatear_moneda(p.descuento_igss),
-            formatear_moneda(p.total_descuentos),
-            formatear_moneda(p.liquido_recibir),
-        )
-
+    from ui import generar_tabla_resumen_planillas
+    tabla = generar_tabla_resumen_planillas(planillas_almacenadas)
     console.print(tabla)
 
     sel = input("\nIngrese el número de empleado para ver su boleta completa (o Enter para volver): ").strip()
@@ -237,9 +215,9 @@ def _modificar_o_eliminar_empleado_accion(
         imprimir_alerta("No hay empleados registrados en la planilla.")
         return None
 
-    console.print("\n[bold]Empleados actualmente registrados:[/bold]")
-    for idx, p in enumerate(planillas_almacenadas, start=1):
-        console.print(f"  [{idx}] {p.empleado} ({p.departamento}) - Líquido: Q {p.liquido_recibir:,.2f}")
+    from ui import generar_tabla_resumen_planillas
+    tabla = generar_tabla_resumen_planillas(planillas_almacenadas)
+    console.print(tabla)
 
     sel = input(f"\nSeleccione el número de empleado a gestionar [1-{len(planillas_almacenadas)}, 0 para cancelar]: ").strip()
     if not sel.isdigit() or int(sel) < 1 or int(sel) > len(planillas_almacenadas):

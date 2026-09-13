@@ -7,11 +7,10 @@ import catalogo_contable
 from diario.engine import GestorLibroDiario
 
 # Constantes de formato y presentación
-from config import FORMATO_FECHA
-PRECISION_MONEDA = Decimal("0.01")
-MONTO_MINIMO = Decimal("0.00")
+from config import CERO_MONETARIO, FORMATO_FECHA, PRECISION_CENTAVOS
+PRECISION_MONEDA = PRECISION_CENTAVOS
+MONTO_MINIMO = CERO_MONETARIO
 MAX_COINCIDENCIAS = 7
-PREFIJO_ALERTA = "  (!) "
 
 
 from ui import imprimir_alerta

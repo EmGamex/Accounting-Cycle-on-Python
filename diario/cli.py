@@ -10,7 +10,7 @@ from diario.asistentes import (
 )
 from diario.engine import GestorLibroDiario
 from diario.operaciones import NOMBRE_IVA_CREDITO, NOMBRE_IVA_DEBITO
-from config import MENSAJE_ALERTA_OPCION, OPCION_SALIR
+from config import MENSAJE_ALERTA_OPCION, OPCION_SALIR, SIMBOLO_MONEDA
 from reportes import imprimir_partida_rich
 from ui import (
     COLOR_AVISO,
@@ -18,6 +18,7 @@ from ui import (
     COLOR_SECUNDARIO,
     console,
     formatear_moneda,
+    generar_tabla_resumen_partidas,
     imprimir_alerta,
     imprimir_banner,
     imprimir_exito,
@@ -57,35 +58,7 @@ def _mostrar_libro_diario(gestor: GestorLibroDiario) -> None:
 
 def _mostrar_resumen_partidas_tabla(gestor: GestorLibroDiario, titulo: str = "PARTIDAS REGISTRADAS EN EL LIBRO DIARIO") -> None:
     """Muestra una tabla compacta con todas las partidas del diario y sus datos clave."""
-    from rich.table import Table
-    from ui.temas import BORDE_TABLA, COLOR_TEXTO
-    from config import FORMATO_FECHA
-
-    tabla = Table(title=f"{titulo} ({len(gestor.libro.partidas)} partidas)", box=BORDE_TABLA)
-    tabla.add_column("No.", justify="right", style="bold cyan", no_wrap=True)
-    tabla.add_column("Fecha", style="dim", no_wrap=True)
-    tabla.add_column("Glosa / Descripción", style=COLOR_TEXTO)
-    tabla.add_column("Origen", style="dim cyan", no_wrap=True)
-    tabla.add_column("Total Debe (Q)", justify="right", style="green", no_wrap=True)
-    tabla.add_column("Total Haber (Q)", justify="right", style="green", no_wrap=True)
-    tabla.add_column("Estado", justify="center", no_wrap=True)
-
-    for p in gestor.libro.partidas:
-        fecha_str = p.fecha.strftime(FORMATO_FECHA) if hasattr(p.fecha, "strftime") else str(p.fecha)
-        glosa_corta = (p.glosa[:40] + "..") if len(p.glosa) > 42 else p.glosa
-        origen_str = p.origen.value if hasattr(p.origen, "value") else str(p.origen)
-        estado = "[green]✓ Cuadra[/green]" if p.cuadra else "[red]✗ Descuadrada[/red]"
-
-        tabla.add_row(
-            str(p.numero),
-            fecha_str,
-            glosa_corta,
-            origen_str,
-            formatear_moneda(p.total_debe),
-            formatear_moneda(p.total_haber),
-            estado,
-        )
-
+    tabla = generar_tabla_resumen_partidas(gestor.libro.partidas, titulo=titulo)
     console.print(tabla)
 
 
@@ -175,8 +148,9 @@ def _modificar_partida_existente(gestor: GestorLibroDiario) -> None:
         console.print("\n[bold]INGRESO DE NUEVAS LÍNEAS (Escriba 'fin' en el código para terminar)[/bold]")
         while True:
             console.print(
-                f"  Estado -> Debe: [green]Q {nueva.total_debe:,.2f}[/green] | "
-                f"Haber: [green]Q {nueva.total_haber:,.2f}[/green] | Diferencia: [yellow]Q {nueva.diferencia:,.2f}[/yellow]"
+                f"  Estado -> Debe: [{COLOR_EXITO}]{formatear_moneda(nueva.total_debe)}[/{COLOR_EXITO}] | "
+                f"Haber: [{COLOR_EXITO}]{formatear_moneda(nueva.total_haber)}[/{COLOR_EXITO}] | "
+                f"Diferencia: [{COLOR_AVISO}]{formatear_moneda(nueva.diferencia)}[/{COLOR_AVISO}]"
             )
             col = input("  ¿Imputar al Debe [D] o al Haber [H]? (o 'fin' para concluir): ").strip().upper()
             if col == "FIN":
@@ -186,7 +160,7 @@ def _modificar_partida_existente(gestor: GestorLibroDiario) -> None:
                 continue
 
             cod, nom = buscar_o_seleccionar_cuenta("  Código o nombre de cuenta", gestor=gestor)
-            monto = pedir_monto(f"  Monto a registrar en el {'DEBE' if col == 'D' else 'HABER'}: Q ")
+            monto = pedir_monto(f"  Monto a registrar en el {'DEBE' if col == 'D' else 'HABER'} ({SIMBOLO_MONEDA}): ")
 
             if col == "D":
                 nueva.agregar_cargo(cod, nom, monto)
@@ -199,7 +173,7 @@ def _modificar_partida_existente(gestor: GestorLibroDiario) -> None:
 
         if not nueva.cuadra:
             imprimir_alerta(
-                f"La partida no cuadra (Diferencia: Q {nueva.diferencia:,.2f}). "
+                f"La partida no cuadra (Diferencia: {formatear_moneda(nueva.diferencia)}). "
                 "No se aplicaron los cambios para preservar la integridad contable."
             )
             return
