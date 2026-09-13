@@ -9,7 +9,6 @@ from .exceptions import CorrelativoError, CuentaInvalidaError, DescuadrePartidaE
 from .models import LibroDiario, MovimientoLinea, PartidaDiario
 from .storage import cargar_libro_json, guardar_libro_json
 
-# Constantes del dominio del Libro Diario para control de correlativos
 CORRELATIVO_INICIAL: int = 1
 CORRELATIVO_MINIMO_VALIDO: int = 1
 
@@ -169,7 +168,6 @@ class GestorLibroDiario:
         partida = self.libro.partidas.pop(origen - 1)
         self.libro.partidas.insert(destino - 1, partida)
 
-        # Re-correlacionar toda la secuencia
         for i, p in enumerate(self.libro.partidas, start=1):
             p.numero = i
 
