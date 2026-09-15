@@ -3,6 +3,7 @@ from datetime import date
 from decimal import Decimal
 import json
 import os
+from pathlib import Path
 import shutil
 import tempfile
 import unittest
@@ -14,11 +15,13 @@ from persistencia import (
     EjercicioContable,
     FormatoArchivoInvalidoError,
     IntegridadDatosError,
+    VersionEsquemaIncompatibleError,
     cargar_ejercicio_json,
     ejercicio_a_dict,
     ejercicio_de_dict,
     guardar_ejercicio_json,
 )
+
 
 
 class TestPersistenciaUnificada(unittest.TestCase):
@@ -280,3 +283,102 @@ class TestPersistenciaUnificada(unittest.TestCase):
 
         with self.assertRaises(IntegridadDatosError):
             cargar_ejercicio_json(self.tmp_path, validar_integridad=True)
+
+    def test_carga_con_campos_nulos_no_genera_string_none(self):
+        """Verifica que campos con valor null en JSON no se transformen en la cadena 'None'."""
+        data_nulos = {
+            "version": "1.1",
+            "nit": None,
+            "direccion": None,
+            "contador_nombre": None,
+            "contador_registro": None,
+            "nombre_empresa": None,
+        }
+        with open(self.tmp_path, "w", encoding="utf-8") as f:
+            json.dump(data_nulos, f)
+
+        cargado = cargar_ejercicio_json(self.tmp_path)
+        self.assertEqual(cargado.nit, "")
+        self.assertEqual(cargado.direccion, "")
+        self.assertEqual(cargado.contador_nombre, "")
+        self.assertEqual(cargado.contador_registro, "")
+        self.assertEqual(cargado.nombre_empresa, "Empresa Ejemplo, S.A.")
+
+    def test_carga_con_listas_nulas(self):
+        """Verifica que si apertura, empleados o planillas son null, no lance TypeError."""
+        data_listas_null = {
+            "version": "1.1",
+            "apertura": None,
+            "empleados": None,
+            "planillas": None,
+            "libro_diario": None,
+        }
+        with open(self.tmp_path, "w", encoding="utf-8") as f:
+            json.dump(data_listas_null, f)
+
+        cargado = cargar_ejercicio_json(self.tmp_path)
+        self.assertEqual(len(cargado.items_apertura), 0)
+        self.assertEqual(len(cargado.empleados), 0)
+        self.assertEqual(len(cargado.planillas), 0)
+        self.assertEqual(len(cargado.libro_diario.partidas), 0)
+
+    def test_carga_con_fecha_invalida_lanza_formato_invalido(self):
+        """Verifica que fechas erróneas en JSON lancen FormatoArchivoInvalidoError."""
+        data_fecha_invalida = {
+            "version": "1.1",
+            "fecha_inicio": "2026-02-30",
+        }
+        with open(self.tmp_path, "w", encoding="utf-8") as f:
+            json.dump(data_fecha_invalida, f)
+
+        with self.assertRaises(FormatoArchivoInvalidoError):
+            cargar_ejercicio_json(self.tmp_path)
+
+    def test_carga_con_lista_tipo_invalido_lanza_error(self):
+        """Verifica que si un campo de lista viene como string u objeto inválido, lance FormatoArchivoInvalidoError."""
+        data_tipo_invalido = {
+            "version": "1.1",
+            "apertura": "no_es_lista",
+        }
+        with open(self.tmp_path, "w", encoding="utf-8") as f:
+            json.dump(data_tipo_invalido, f)
+
+        with self.assertRaises(FormatoArchivoInvalidoError):
+            cargar_ejercicio_json(self.tmp_path)
+
+    def test_guardar_y_cargar_con_pathlib_path(self):
+        """Verifica que guardar y cargar funcione pasando instancias pathlib.Path."""
+        path_obj = Path(self.tmp_path)
+        ej = EjercicioContable(nombre_empresa="Empresa con Path")
+        guardar_ejercicio_json(ej, path_obj, backup=True)
+
+        cargado = cargar_ejercicio_json(path_obj)
+        self.assertEqual(cargado.nombre_empresa, "Empresa con Path")
+
+        # Verificar que el backup también se haya generado
+        bak_path = Path(str(self.tmp_path) + ".bak")
+        guardar_ejercicio_json(ej, path_obj, backup=True)
+        self.assertTrue(bak_path.exists())
+
+    def test_version_esquema_incompatible_lanza_error(self):
+        """Verifica que esquemas con versión mayor incompatible (> 1.x) lancen VersionEsquemaIncompatibleError."""
+        data_futura = {
+            "version": "2.0",
+            "nombre_empresa": "Futuro",
+        }
+        with open(self.tmp_path, "w", encoding="utf-8") as f:
+            json.dump(data_futura, f)
+
+        with self.assertRaises(VersionEsquemaIncompatibleError):
+            cargar_ejercicio_json(self.tmp_path)
+
+    def test_sincronizacion_fecha_modificacion_en_memoria(self):
+        """Verifica que guardar_ejercicio_json actualice la fecha_modificacion en la instancia."""
+        ej = EjercicioContable(nombre_empresa="Test Sync")
+        ej.fecha_modificacion = "2020-01-01T00:00:00+00:00"
+        guardar_ejercicio_json(ej, self.tmp_path)
+
+        self.assertNotEqual(ej.fecha_modificacion, "2020-01-01T00:00:00+00:00")
+        cargado = cargar_ejercicio_json(self.tmp_path)
+        self.assertEqual(cargado.fecha_modificacion, ej.fecha_modificacion)
+
