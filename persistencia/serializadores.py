@@ -1,12 +1,21 @@
-"""Serializadores y deserializadores para transformar modelos a diccionarios y viceversa."""
-from datetime import date
+﻿"""Serializadores y deserializadores para transformar modelos a diccionarios y viceversa."""
+from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from apertura.models import ItemCuentaApertura
 from diario.storage import libro_a_dict, libro_de_dict
 from planilla.models import DatosEmpleado, ResultadoPlanilla
-from .exceptions import FormatoArchivoInvalidoError, IntegridadDatosError
+from .exceptions import (
+    FormatoArchivoInvalidoError,
+    IntegridadDatosError,
+    VersionEsquemaIncompatibleError,
+)
+from .helpers import extraer_bool, extraer_fecha, extraer_str
+from .models import EjercicioContable
+from .validadores import validar_integridad_contable
+
+VERSION_ACTUAL_MAYOR = 1
 
 
 def item_apertura_a_dict(item: ItemCuentaApertura) -> Dict[str, Any]:
@@ -134,11 +143,105 @@ def resultado_planilla_de_dict(data: Dict[str, Any]) -> ResultadoPlanilla:
         raise FormatoArchivoInvalidoError(f"Error numérico en boleta de '{data.get('empleado')}': {exc}") from exc
 
 
-def validar_integridad_contable(libro) -> None:
-    """Verifica que todas las partidas del libro diario cumplan con la partida doble."""
-    for partida in libro.partidas:
-        if not partida.cuadra:
-            raise IntegridadDatosError(
-                f"La Partida No. {partida.numero} del Libro Diario está descuadrada: "
-                f"Debe={partida.total_debe}, Haber={partida.total_haber}, Diferencia={partida.diferencia}"
+def ejercicio_a_dict(ejercicio: EjercicioContable) -> Dict[str, Any]:
+    """Convierte el EjercicioContable completo a estructura serializable JSON."""
+    ahora_utc = datetime.now(timezone.utc).isoformat()
+    ejercicio.fecha_modificacion = ahora_utc
+
+    return {
+        "formato": "ejercicio_contable_unificado",
+        "version": ejercicio.version,
+        "nombre_empresa": ejercicio.nombre_empresa,
+        "nit": ejercicio.nit,
+        "direccion": ejercicio.direccion,
+        "moneda": ejercicio.moneda,
+        "regimen_tributario": ejercicio.regimen_tributario,
+        "contador_nombre": ejercicio.contador_nombre,
+        "contador_registro": ejercicio.contador_registro,
+        "periodo": ejercicio.periodo,
+        "fecha_inicio": ejercicio.fecha_inicio.isoformat() if ejercicio.fecha_inicio else None,
+        "fecha_fin": ejercicio.fecha_fin.isoformat() if ejercicio.fecha_fin else None,
+        "cerrado": ejercicio.cerrado,
+        "fecha_creacion": ejercicio.fecha_creacion,
+        "fecha_modificacion": ahora_utc,
+        "apertura": [item_apertura_a_dict(it) for it in ejercicio.items_apertura],
+        "libro_diario": libro_a_dict(ejercicio.libro_diario),
+        "empleados": [datos_empleado_a_dict(emp) for emp in ejercicio.empleados],
+        "planillas": [resultado_planilla_a_dict(res) for res in ejercicio.planillas],
+    }
+
+
+def ejercicio_de_dict(data: Dict[str, Any], validar_integridad: bool = False) -> EjercicioContable:
+    """
+    Reconstruye un EjercicioContable a partir de un diccionario.
+    Detecta automáticamente si la estructura es de formato unificado (v1.0 / v1.1) o de libro diario legado.
+    """
+    if not isinstance(data, dict):
+        raise FormatoArchivoInvalidoError("La raíz del archivo contable debe ser un objeto JSON.")
+
+    if "partidas" in data and "libro_diario" not in data:
+        libro = libro_de_dict(data)
+        if validar_integridad:
+            validar_integridad_contable(libro)
+        return EjercicioContable(
+            version="1.0",
+            nombre_empresa="Empresa Sin Nombre",
+            periodo="2026",
+            libro_diario=libro,
+        )
+
+    ver_str = extraer_str(data, "version", "1.1")
+    try:
+        ver_mayor = int(ver_str.split(".")[0])
+        if ver_mayor > VERSION_ACTUAL_MAYOR:
+            raise VersionEsquemaIncompatibleError(
+                f"La versión del esquema '{ver_str}' es incompatible con esta aplicación (soporta v{VERSION_ACTUAL_MAYOR}.x)."
             )
+    except ValueError:
+        pass
+
+    raw_apertura = data.get("apertura") or []
+    if not isinstance(raw_apertura, list):
+        raise FormatoArchivoInvalidoError("El campo 'apertura' debe ser una lista.")
+    apertura_items = [item_apertura_de_dict(it) for it in raw_apertura]
+
+    diario_data = data.get("libro_diario")
+    libro = libro_de_dict(diario_data) if isinstance(diario_data, dict) else libro_de_dict({"partidas": []})
+
+    if validar_integridad:
+        validar_integridad_contable(libro)
+
+    raw_empleados = data.get("empleados") or []
+    if not isinstance(raw_empleados, list):
+        raise FormatoArchivoInvalidoError("El campo 'empleados' debe ser una lista.")
+    empleados = [datos_empleado_de_dict(emp) for emp in raw_empleados]
+
+    raw_planillas = data.get("planillas") or []
+    if not isinstance(raw_planillas, list):
+        raise FormatoArchivoInvalidoError("El campo 'planillas' debe ser una lista.")
+    planillas = [resultado_planilla_de_dict(res) for res in raw_planillas]
+
+    ahora_default = datetime.now(timezone.utc).isoformat()
+
+    return EjercicioContable(
+        version=ver_str,
+        nombre_empresa=extraer_str(data, "nombre_empresa", "Empresa Ejemplo, S.A."),
+        nit=extraer_str(data, "nit", ""),
+        direccion=extraer_str(data, "direccion", ""),
+        moneda=extraer_str(data, "moneda", "GTQ"),
+        regimen_tributario=extraer_str(
+            data, "regimen_tributario", "Opcional Simplificado sobre Ingresos de Actividades Lucrativas"
+        ),
+        contador_nombre=extraer_str(data, "contador_nombre", ""),
+        contador_registro=extraer_str(data, "contador_registro", ""),
+        periodo=extraer_str(data, "periodo", "2026"),
+        fecha_inicio=extraer_fecha(data, "fecha_inicio"),
+        fecha_fin=extraer_fecha(data, "fecha_fin"),
+        cerrado=extraer_bool(data, "cerrado", False),
+        fecha_creacion=extraer_str(data, "fecha_creacion", ahora_default),
+        fecha_modificacion=extraer_str(data, "fecha_modificacion", ahora_default),
+        items_apertura=apertura_items,
+        libro_diario=libro,
+        empleados=empleados,
+        planillas=planillas,
+    )
