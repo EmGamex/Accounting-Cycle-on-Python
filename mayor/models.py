@@ -5,6 +5,8 @@ from decimal import Decimal
 from enum import Enum
 from typing import Dict, List, Optional
 
+from catalogo_contable import normalizar
+
 TWO_PLACES = Decimal("0.01")
 
 
@@ -220,9 +222,12 @@ class LibroMayor:
         return self.cuentas.get(codigo.strip())
 
     def buscar_cuentas(self, termino: str) -> List[CuentaMayor]:
-        """Filtra cuentas por código o nombre."""
-        term = termino.strip().lower()
+        """Filtra cuentas por código o nombre (insensible a mayúsculas y tildes)."""
+        term_clean = termino.strip().lower()
+        term_norm = normalizar(termino)
         return [
             c for c in self.cuentas_ordenadas
-            if term == c.codigo.lower() or term in c.nombre.lower()
+            if term_clean == c.codigo.lower()
+            or term_clean in c.nombre.lower()
+            or (term_norm and term_norm in normalizar(c.nombre))
         ]

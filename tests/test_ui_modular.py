@@ -135,6 +135,33 @@ class TestUIModular(unittest.TestCase):
         self.assertIn("(!)", salida)
         self.assertIn("[!]", salida)
 
+    def test_seleccionar_coincidencia_interactiva_vacio_y_unico(self):
+        # Lista vacía retorna None
+        self.assertIsNone(ui.seleccionar_coincidencia_interactiva([]))
+
+        # Lista de 1 elemento auto-selecciona sin pedir input
+        item = ("Activo", "Corriente", "1101", "Caja General")
+        sel = ui.seleccionar_coincidencia_interactiva([item], mostrar_feedback=False)
+        self.assertEqual(sel, item)
+
+    @patch("builtins.input", side_effect=["2"])
+    def test_seleccionar_coincidencia_interactiva_multiple_valido(self, mock_input):
+        items = [
+            ("Activo", "Corriente", "1101", "Caja"),
+            ("Activo", "Corriente", "1102", "Bancos"),
+        ]
+        sel = ui.seleccionar_coincidencia_interactiva(items, mostrar_feedback=False)
+        self.assertEqual(sel, items[1])
+
+    @patch("builtins.input", side_effect=[""])
+    def test_seleccionar_coincidencia_interactiva_cancelar(self, mock_input):
+        items = [
+            ("Activo", "Corriente", "1101", "Caja"),
+            ("Activo", "Corriente", "1102", "Bancos"),
+        ]
+        sel = ui.seleccionar_coincidencia_interactiva(items, mostrar_feedback=False)
+        self.assertIsNone(sel)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -4,14 +4,7 @@ from decimal import Decimal
 from typing import Dict, List, Optional
 
 
-@dataclass
-class CuentaCatalogo:
-    codigo: str
-    nombre: str
-    nombre_norm: str
-    clase: str
-    subgrupo: str
-    es_regularizadora: bool = False
+from catalogo_contable import CuentaCatalogo
 
 
 @dataclass

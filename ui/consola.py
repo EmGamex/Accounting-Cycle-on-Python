@@ -109,20 +109,75 @@ def imprimir_menu_clasificacion(nombre_cuenta: str) -> None:
     console.print("  [cyan]5[/cyan]. Capital / Patrimonio")
 
 
+def _obtener_codigo_y_nombre(c: Any) -> Tuple[str, str, bool]:
+    """Extrae código, nombre y flag regularizadora de cualquier objeto de cuenta o tupla."""
+    codigo = getattr(c, "codigo", None)
+    nombre = getattr(c, "nombre", None)
+    es_reg = getattr(c, "es_regularizadora", False)
+    if codigo is None or nombre is None:
+        if isinstance(c, (tuple, list)) and len(c) >= 4:
+            codigo, nombre = str(c[2]), str(c[3])
+        elif isinstance(c, (tuple, list)) and len(c) >= 2:
+            codigo, nombre = str(c[0]), str(c[1])
+        else:
+            codigo, nombre = str(c), str(c)
+    return str(codigo), str(nombre), bool(es_reg)
+
+
 def imprimir_coincidencias_cuentas(coincidencias: Sequence[Any], limite: int = 8) -> None:
     """Muestra la lista numerada de coincidencias de catálogo encontradas."""
     console.print(f"\n  Coincidencias encontradas ([bold cyan]{len(coincidencias)}[/bold cyan]):")
     for idx, c in enumerate(coincidencias[:limite], 1):
-        es_reg = getattr(c, "es_regularizadora", False)
+        codigo, nombre, es_reg = _obtener_codigo_y_nombre(c)
         tag_reg = " [yellow](-)[/yellow]" if es_reg else "    "
-        console.print(f"    [[bold cyan]{idx}[/bold cyan]] [cyan]{c.codigo:<9}[/cyan]{tag_reg} {c.nombre}")
+        console.print(f"    [[bold cyan]{idx}[/bold cyan]] [cyan]{codigo:<9}[/cyan]{tag_reg} {nombre}")
 
 
 def imprimir_cuenta_seleccionada(cuenta: Any) -> None:
     """Muestra la cuenta que fue seleccionada de forma explícita."""
-    es_reg = getattr(cuenta, "es_regularizadora", False)
+    codigo, nombre, es_reg = _obtener_codigo_y_nombre(cuenta)
     tag_reg = " [bold yellow](Cuenta Regularizadora)[/bold yellow]" if es_reg else ""
-    console.print(f"  [green]->[/green] Seleccionada: [[cyan]{cuenta.codigo}[/cyan]] {cuenta.nombre}{tag_reg}")
+    console.print(f"  [green]->[/green] Seleccionada: [[cyan]{codigo}[/cyan]] {nombre}{tag_reg}")
+
+
+def seleccionar_coincidencia_interactiva(
+    coincidencias: Sequence[Any],
+    limite: int = 8,
+    mostrar_feedback: bool = True,
+    mensaje_prompt: str = "   Elija el número de la cuenta o presione Enter para cancelar: ",
+    permitir_reintento: bool = True,
+) -> Optional[Any]:
+    """Permite seleccionar interactivamente una cuenta entre una lista de coincidencias.
+
+    - Si la lista está vacía, retorna None.
+    - Si contiene exactamente 1 elemento, lo auto-selecciona con feedback visual opcional.
+    - Si contiene varios elementos, muestra la lista estilizada y solicita el número.
+    """
+    if not coincidencias:
+        return None
+
+    if len(coincidencias) == 1:
+        c = coincidencias[0]
+        if mostrar_feedback:
+            imprimir_cuenta_seleccionada(c)
+        return c
+
+    lim = min(len(coincidencias), limite) if limite > 0 else len(coincidencias)
+    imprimir_coincidencias_cuentas(coincidencias, limite=lim)
+
+    while True:
+        sel = input(mensaje_prompt).strip()
+        if not sel:
+            return None
+        if sel.isdigit() and 1 <= int(sel) <= lim:
+            c = coincidencias[int(sel) - 1]
+            if mostrar_feedback:
+                imprimir_cuenta_seleccionada(c)
+            return c
+        if not permitir_reintento:
+            imprimir_alerta("Selección cancelada.")
+            return None
+        imprimir_alerta(f"Ingrese un número entre 1 y {lim}.")
 
 
 def imprimir_resumen_balance_apertura(resumen: Any) -> None:

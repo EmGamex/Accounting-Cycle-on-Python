@@ -25,6 +25,7 @@ from ui import (
     imprimir_menu_clasificacion,
     imprimir_resumen_balance_apertura,
     pedir_confirmacion,
+    seleccionar_coincidencia_interactiva,
 )
 
 # Constantes de control y límites visuales específicas de apertura
@@ -77,26 +78,13 @@ def mostrar_cuentas_registradas(motor: MotorApertura) -> None:
 def seleccionar_cuenta_interactiva(catalogo: CatalogoService, entrada: str) -> Optional[CuentaCatalogo]:
     """Busca coincidencias y, si hay varias, permite al usuario seleccionar interactivamente."""
     coincidencias = catalogo.buscar_coincidencias(entrada)
-    if not coincidencias:
-        return None
-
-    if len(coincidencias) == 1:
-        c = coincidencias[0]
-        imprimir_cuenta_seleccionada(c)
-        return c
-
-    limite = min(len(coincidencias), MAX_COINCIDENCIAS_MOSTRADAS)
-    imprimir_coincidencias_cuentas(coincidencias, limite=limite)
-
-    while True:
-        sel = input("   Elija el número de la cuenta o presione Enter para cancelar: ").strip()
-        if not sel:
-            return None
-        if sel.isdigit() and 1 <= int(sel) <= limite:
-            c = coincidencias[int(sel) - 1]
-            imprimir_cuenta_seleccionada(c)
-            return c
-        imprimir_alerta(f"Ingrese un número entre 1 y {limite}.")
+    return seleccionar_coincidencia_interactiva(
+        coincidencias,
+        limite=MAX_COINCIDENCIAS_MOSTRADAS,
+        mostrar_feedback=True,
+        mensaje_prompt="   Elija el número de la cuenta o presione Enter para cancelar: ",
+        permitir_reintento=True,
+    )
 
 
 def resolver_cuenta(catalogo: CatalogoService, entrada: str) -> Optional[CuentaCatalogo]:

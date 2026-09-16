@@ -1,7 +1,7 @@
 """Módulo de captura y validación de entradas por teclado para el Libro Diario."""
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
-from typing import Optional
+from typing import Any, Optional
 
 import catalogo_contable
 from diario.engine import GestorLibroDiario
@@ -13,7 +13,7 @@ MONTO_MINIMO = CERO_MONETARIO
 MAX_COINCIDENCIAS = 7
 
 
-from ui import imprimir_alerta
+from ui import imprimir_alerta, seleccionar_coincidencia_interactiva
 
 
 def _mostrar_alerta(mensaje: str) -> None:
@@ -21,9 +21,15 @@ def _mostrar_alerta(mensaje: str) -> None:
     imprimir_alerta(mensaje)
 
 
-def _extraer_codigo_y_nombre(cuenta: tuple) -> tuple[str, str]:
-    """Extrae únicamente el código y nombre de una tupla de catálogo."""
-    return cuenta[2], cuenta[3]
+def _extraer_codigo_y_nombre(cuenta: Any) -> tuple[str, str]:
+    """Extrae únicamente el código y nombre de una cuenta o tupla."""
+    codigo = getattr(cuenta, "codigo", None)
+    nombre = getattr(cuenta, "nombre", None)
+    if codigo is not None and nombre is not None:
+        return str(codigo).strip(), str(nombre).strip()
+    if isinstance(cuenta, (tuple, list)) and len(cuenta) >= 4:
+        return str(cuenta[2]).strip(), str(cuenta[3]).strip()
+    return str(cuenta), str(cuenta)
 
 
 def pedir_fecha(mensaje: str = "Fecha (DD/MM/AAAA) [Hoy]: ") -> date:
@@ -84,17 +90,12 @@ def buscar_o_seleccionar_cuenta(
             _mostrar_alerta(f"No se encontró ninguna cuenta para '{entrada}'. Intente nuevamente.")
             continue
 
-        if len(coincidencias) == 1:
-            cod, nom = _extraer_codigo_y_nombre(coincidencias[0])
-            print(f"      -> Seleccionada: [{cod}] {nom}")
-            return cod, nom
-
-        opciones = coincidencias[:MAX_COINCIDENCIAS]
-        print(f"  Coincidencias encontradas ({len(coincidencias)}):")
-        for idx, cuenta in enumerate(opciones, 1):
-            cod, nom = _extraer_codigo_y_nombre(cuenta)
-            print(f"    [{idx}] {cod:<9} {nom}")
-
-        sel = input("  Elija el número de la cuenta o presione Enter para buscar otra vez: ").strip()
-        if sel.isdigit() and 1 <= int(sel) <= len(opciones):
-            return _extraer_codigo_y_nombre(opciones[int(sel) - 1])
+        seleccion = seleccionar_coincidencia_interactiva(
+            coincidencias,
+            limite=MAX_COINCIDENCIAS,
+            mostrar_feedback=True,
+            mensaje_prompt="  Elija el número de la cuenta o presione Enter para buscar otra vez: ",
+            permitir_reintento=True,
+        )
+        if seleccion is not None:
+            return _extraer_codigo_y_nombre(seleccion)

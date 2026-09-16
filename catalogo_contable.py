@@ -3,8 +3,12 @@
 Proporciona la estructura contable formal, nomenclatura compatible con NIIF para PYMES
 y legislación guatemalteca (SAT / IGSS / Código de Trabajo), así como funciones de navegación.
 """
+import difflib
+import re
 import sys
-from typing import Dict, List, Optional, Tuple
+import unicodedata
+from dataclasses import dataclass
+from typing import Any, Dict, Iterable, Iterator, List, Optional, Sequence, Tuple
 
 if sys.version_info >= (3, 11):
     from enum import StrEnum
@@ -15,6 +19,72 @@ else:
         """Polyfill de StrEnum para compatibilidad con Python < 3.11."""
         def __str__(self) -> str:
             return str(self.value)
+
+
+@dataclass
+class CuentaCatalogo:
+    """Modelo canónico de una cuenta en el catálogo contable."""
+    codigo: str
+    nombre: str
+    nombre_norm: str
+    clase: str
+    subgrupo: str
+    es_regularizadora: bool = False
+
+    def __iter__(self) -> Iterator[str]:
+        """Permite desempaquetado directo como 4-tupla: (clase, subgrupo, codigo, nombre)."""
+        yield self.clase
+        yield self.subgrupo
+        yield self.codigo
+        yield self.nombre
+
+    def __getitem__(self, idx: int) -> str:
+        """Compatibilidad con acceso por índice como tupla (0: clase, 1: subgrupo, 2: codigo, 3: nombre)."""
+        mapeo = (self.clase, self.subgrupo, self.codigo, self.nombre)
+        return mapeo[idx]
+
+    def __len__(self) -> int:
+        return 4
+
+
+PATRONES_REGULARIZADORAS = [
+    "depreciacion acumulada",
+    "amortizacion acumulada",
+    "estimacion para",
+    "reserva para",
+    "perdidas acumuladas",
+    "deterioro",
+]
+
+SINONIMOS = {
+    "mercaderia": "inventario de mercancias",
+    "mercaderias": "inventario de mercancias",
+    "mercancia": "inventario de mercancias",
+    "inventario": "inventario de mercancias",
+    "banco": "bancos",
+    "prestamo": "prestamos bancarios",
+    "prestamos": "prestamos bancarios",
+    "mobiliario": "mobiliario y equipo",
+    "equipo de oficina": "mobiliario y equipo de oficina",
+    "capital": "capital social",
+    "depreciacion": "depreciacion acumulada",
+    "vehiculo": "vehiculos",
+}
+
+
+def normalizar(texto: str) -> str:
+    """Elimina tildes, caracteres especiales y convierte a minúsculas."""
+    if not texto:
+        return ""
+    texto_norm = unicodedata.normalize("NFD", texto)
+    limpio = "".join(c for c in texto_norm if unicodedata.category(c) != "Mn").lower().strip()
+    return re.sub(r"^[(\-)\s]+", "", limpio)
+
+
+def es_cuenta_regularizadora(nombre: str) -> bool:
+    """Detecta si una cuenta contable es regularizadora/complementaria de saldo contrario."""
+    norm = normalizar(nombre)
+    return any(p in norm for p in PATRONES_REGULARIZADORAS) or "(-)" in nombre
 
 
 class Cuenta(StrEnum):
@@ -263,14 +333,184 @@ def listar_cuentas(filtro_clase: Optional[str] = None) -> List[Tuple[str, str, s
     return cuentas
 
 
-def buscar_cuenta(termino: str) -> List[Tuple[str, str, str, str]]:
-    """Busca cuentas por coincidencia en código o en nombre."""
-    termino_clean = termino.strip().lower()
-    coincidencias: List[Tuple[str, str, str, str]] = []
-    for clase, subgrupo, codigo, nombre in listar_cuentas():
-        if termino_clean == codigo.lower() or termino_clean in nombre.lower():
-            coincidencias.append((clase, subgrupo, codigo, nombre))
-    return coincidencias
+class CatalogoService:
+    """Servicio con indexación O(1) en memoria para búsquedas eficientes en catálogo."""
+
+    def __init__(
+        self,
+        catalogo_dict: Optional[dict] = None,
+        filtro_clases: Optional[Iterable[str]] = None,
+    ):
+        self._por_codigo: Dict[str, CuentaCatalogo] = {}
+        self._por_nombre_norm: Dict[str, CuentaCatalogo] = {}
+        self._cuentas: List[CuentaCatalogo] = []
+        self._nombres_norm: List[str] = []
+        self._filtro_clases = list(filtro_clases) if filtro_clases else None
+
+        fuente = catalogo_dict if catalogo_dict is not None else catalogo_cuentas
+        self._indexar(fuente)
+
+    @classmethod
+    def desde_modulo(cls, filtro_clases: Optional[Iterable[str]] = None) -> "CatalogoService":
+        """Carga e indexa el catálogo central."""
+        return cls(catalogo_cuentas, filtro_clases=filtro_clases)
+
+    def _indexar(self, catalogo: dict) -> None:
+        """Construye índices O(1) a partir de la estructura jerárquica contable."""
+        self._por_codigo.clear()
+        self._por_nombre_norm.clear()
+        self._cuentas.clear()
+        self._nombres_norm.clear()
+
+        for clase, subgrupos in catalogo.items():
+            if self._filtro_clases and not any(k.lower() in clase.lower() for k in self._filtro_clases):
+                continue
+
+            for subgrupo, cuentas in subgrupos.items():
+                for codigo, nombre in cuentas.items():
+                    cod_str = str(codigo).strip()
+                    norm = normalizar(nombre)
+                    es_reg = es_cuenta_regularizadora(nombre)
+
+                    item = CuentaCatalogo(
+                        codigo=cod_str,
+                        nombre=nombre,
+                        nombre_norm=norm,
+                        clase=clase,
+                        subgrupo=subgrupo,
+                        es_regularizadora=es_reg,
+                    )
+
+                    self._cuentas.append(item)
+                    self._por_codigo[cod_str] = item
+                    if norm not in self._por_nombre_norm:
+                        self._por_nombre_norm[norm] = item
+                    self._nombres_norm.append(norm)
+
+    @property
+    def cuentas(self) -> List[CuentaCatalogo]:
+        return list(self._cuentas)
+
+    def buscar(self, texto_usuario: str) -> Optional[CuentaCatalogo]:
+        """Búsqueda eficiente: O(1) por código o nombre exacto/sinónimo, seguida de tokens y difflib."""
+        texto_limpio = texto_usuario.strip()
+        if not texto_limpio:
+            return None
+
+        if texto_limpio in self._por_codigo:
+            return self._por_codigo[texto_limpio]
+
+        texto_norm = normalizar(texto_limpio)
+        termino = SINONIMOS.get(texto_norm, texto_norm)
+
+        if texto_norm in self._por_nombre_norm:
+            return self._por_nombre_norm[texto_norm]
+        if termino in self._por_nombre_norm:
+            return self._por_nombre_norm[termino]
+
+        terminos_busqueda = [termino]
+        if texto_norm != termino:
+            terminos_busqueda.append(texto_norm)
+
+        for obj in terminos_busqueda:
+            candidatos = []
+            if len(obj) >= 4:
+                candidatos = [c for c in self._cuentas if obj in c.nombre_norm]
+            else:
+                patron = rf"\b{re.escape(obj)}\b"
+                candidatos = [c for c in self._cuentas if re.search(patron, c.nombre_norm)]
+
+            if candidatos:
+                busca_reg = any(r in obj for r in PATRONES_REGULARIZADORAS)
+                candidatos.sort(key=lambda c: (c.es_regularizadora if not busca_reg else not c.es_regularizadora, len(c.nombre_norm)))
+                return candidatos[0]
+
+        # 4. Todas las palabras contenidas
+        palabras = termino.split()
+        if len(palabras) > 1:
+            coincidencias_palabras = [c for c in self._cuentas if all(p in c.nombre_norm for p in palabras)]
+            if coincidencias_palabras:
+                coincidencias_palabras.sort(key=lambda c: len(c.nombre_norm))
+                return coincidencias_palabras[0]
+
+        # 5. Similitud difusa con difflib
+        coincidencias = difflib.get_close_matches(termino, self._nombres_norm, n=1, cutoff=0.55)
+        if not coincidencias and texto_norm != termino:
+            coincidencias = difflib.get_close_matches(texto_norm, self._nombres_norm, n=1, cutoff=0.55)
+
+        if coincidencias:
+            return self._por_nombre_norm.get(coincidencias[0])
+
+        return None
+
+    def buscar_coincidencias(self, texto_usuario: str) -> List[CuentaCatalogo]:
+        """Busca todas las cuentas que coincidan por código o nombre para selección interactiva."""
+        texto_limpio = texto_usuario.strip()
+        if not texto_limpio:
+            return []
+
+        # 1. Búsqueda exacta por código
+        if texto_limpio in self._por_codigo:
+            return [self._por_codigo[texto_limpio]]
+
+        texto_norm = normalizar(texto_limpio)
+        termino = SINONIMOS.get(texto_norm, texto_norm)
+
+        coincidencias: List[CuentaCatalogo] = []
+        codigos_vistos = set()
+
+        def agregar(c: CuentaCatalogo):
+            if c.codigo not in codigos_vistos:
+                codigos_vistos.add(c.codigo)
+                coincidencias.append(c)
+
+        # 2. Coincidencia exacta por nombre normalizado o sinónimo
+        if texto_norm in self._por_nombre_norm:
+            agregar(self._por_nombre_norm[texto_norm])
+        if termino in self._por_nombre_norm:
+            agregar(self._por_nombre_norm[termino])
+
+        # 3. Subcadena en código o nombre
+        termino_lower = texto_limpio.lower()
+        for c in self._cuentas:
+            if (
+                termino_lower in c.codigo.lower()
+                or termino in c.nombre_norm
+                or texto_norm in c.nombre_norm
+            ):
+                agregar(c)
+
+        # 4. Palabras contenidas
+        palabras = termino.split()
+        if len(palabras) > 1:
+            for c in self._cuentas:
+                if all(p in c.nombre_norm for p in palabras):
+                    agregar(c)
+
+        # 5. Similitud difusa con difflib si no hay coincidencias directas
+        if not coincidencias:
+            cercanas = difflib.get_close_matches(termino, self._nombres_norm, n=5, cutoff=0.50)
+            for nombre_cercano in cercanas:
+                if nombre_cercano in self._por_nombre_norm:
+                    agregar(self._por_nombre_norm[nombre_cercano])
+
+        return coincidencias
+
+
+_CATALOGO_SERVICIO_GLOBAL: Optional[CatalogoService] = None
+
+
+def obtener_catalogo_servicio() -> CatalogoService:
+    """Retorna la instancia global única del servicio de catálogo indexado."""
+    global _CATALOGO_SERVICIO_GLOBAL
+    if _CATALOGO_SERVICIO_GLOBAL is None:
+        _CATALOGO_SERVICIO_GLOBAL = CatalogoService.desde_modulo()
+    return _CATALOGO_SERVICIO_GLOBAL
+
+
+def buscar_cuenta(termino: str) -> List[CuentaCatalogo]:
+    """Busca cuentas por coincidencia en código o en nombre (soporta acceso como 4-tupla o CuentaCatalogo)."""
+    return obtener_catalogo_servicio().buscar_coincidencias(termino)
 
 
 def generar_arbol_rich(filtro_clase: Optional[str] = None):

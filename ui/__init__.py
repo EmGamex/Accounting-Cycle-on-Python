@@ -16,6 +16,7 @@ from ui.consola import (
     imprimir_resumen_balance_apertura,
     obtener_ancho_consola,
     pedir_confirmacion,
+    seleccionar_coincidencia_interactiva,
 )
 from ui.tablas import (
     generar_tabla_boleta,
@@ -89,4 +90,5 @@ __all__ = [
     "mostrar_catalogo_arbol",
     "obtener_ancho_consola",
     "pedir_confirmacion",
+    "seleccionar_coincidencia_interactiva",
 ]

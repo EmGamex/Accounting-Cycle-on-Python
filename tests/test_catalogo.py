@@ -66,6 +66,50 @@ class TestCatalogoContable(unittest.TestCase):
         arbol_activo = cat.generar_arbol_rich(filtro_clase="Activo")
         self.assertEqual(len(arbol_activo.children), 1)
 
+    def test_catalogo_service_unificado_y_sinonimos(self):
+        """Verifica que el servicio central de catálogo soporte sinónimos, tildes y búsqueda difusa."""
+        servicio = cat.obtener_catalogo_servicio()
+        # Búsqueda por sinónimo
+        cta_banco = servicio.buscar("banco")
+        self.assertIsNotNone(cta_banco)
+        self.assertEqual(cta_banco.codigo, "1102")
+
+        cta_mercaderia = servicio.buscar("mercaderia")
+        self.assertIsNotNone(cta_mercaderia)
+        self.assertEqual(cta_mercaderia.codigo, "1104")
+
+        # Búsqueda en cuentas de resultados (Gastos / Ingresos)
+        cta_sueldos = servicio.buscar("sueldos administracion")
+        self.assertIsNotNone(cta_sueldos)
+        self.assertEqual(cta_sueldos.codigo, "5201-01")
+
+        # Búsqueda difusa (con error tipográfico)
+        cta_difusa = servicio.buscar("vehicuos")
+        self.assertIsNotNone(cta_difusa)
+        self.assertEqual(cta_difusa.codigo, "1206")
+
+    def test_cuenta_catalogo_compatibilidad_tupla(self):
+        """Verifica que CuentaCatalogo sea desempaquetable como 4-tupla e indexable por posición."""
+        servicio = cat.obtener_catalogo_servicio()
+        cuentas = servicio.buscar_coincidencias("1101")
+        self.assertEqual(len(cuentas), 1)
+        c = cuentas[0]
+
+        # Acceso por atributos
+        self.assertEqual(c.codigo, "1101")
+        self.assertEqual(c.nombre, "Caja General")
+
+        # Acceso por índice
+        self.assertEqual(c[0], c.clase)
+        self.assertEqual(c[1], c.subgrupo)
+        self.assertEqual(c[2], "1101")
+        self.assertEqual(c[3], "Caja General")
+
+        # Desempaquetado directo
+        clase, subgrupo, codigo, nombre = c
+        self.assertEqual(codigo, "1101")
+        self.assertEqual(nombre, "Caja General")
+
 
 if __name__ == "__main__":
     unittest.main()
