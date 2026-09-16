@@ -22,6 +22,7 @@ from ui.tablas import (
     generar_tabla_boleta,
     generar_tabla_cuentas_registradas,
     generar_tabla_balance_4_columnas,
+    generar_tabla_balance_apertura,
     generar_tabla_balance_general,
     generar_tabla_estado_resultados,
     generar_tabla_mayor_formal,
@@ -31,6 +32,7 @@ from ui.tablas import (
     generar_tabla_resumen_planillas,
     generar_tabla_sumas_y_saldos,
     generar_tabla_t_grafica,
+    imprimir_balance_apertura_rich,
     imprimir_partida_rich,
 )
 from ui.temas import (
@@ -65,6 +67,7 @@ __all__ = [
     "formatear_moneda",
     "generar_arbol_catalogo",
     "generar_tabla_balance_4_columnas",
+    "generar_tabla_balance_apertura",
     "generar_tabla_balance_general",
     "generar_tabla_boleta",
     "generar_tabla_cuentas_registradas",
@@ -78,6 +81,7 @@ __all__ = [
     "generar_tabla_t_grafica",
     "imprimir_alerta",
     "imprimir_aviso",
+    "imprimir_balance_apertura_rich",
     "imprimir_banner",
     "imprimir_coincidencias_cuentas",
     "imprimir_cuenta_seleccionada",

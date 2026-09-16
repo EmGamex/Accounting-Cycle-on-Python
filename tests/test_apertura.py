@@ -157,14 +157,16 @@ class TestAperturaContable(unittest.TestCase):
                 os.remove(ruta_test)
 
     @patch("builtins.input", side_effect=[
-        "1101",
-        "8000.00",
-        "fin",
-        "s",  # Cuadrar con capital
-        "n",  # No exportar a txt
+        "1",        # Opción 1: Registrar cuentas
+        "1101",     # Código Caja
+        "8000.00",  # Monto
+        "",         # Enter vacío para volver al menú
+        "6",        # Opción 6: Finalizar apertura
+        "s",        # Cuadrar con capital
+        "n",        # No exportar a txt
     ])
     def test_iniciar_flujo_apertura_retorno(self, mock_input):
-        """Verifica que iniciar_flujo_apertura retorne correctamente resumen y partida."""
+        """Verifica que iniciar_flujo_apertura retorne correctamente resumen y partida con el menú numerado."""
         from apertura.cli import iniciar_flujo_apertura
         resumen, partida = iniciar_flujo_apertura(numero_partida=3, exportar_archivo=True)
         self.assertIsNotNone(resumen)
@@ -201,15 +203,15 @@ class TestAperturaContable(unittest.TestCase):
         self.assertEqual(motor.items[0].monto, Decimal("7500.00"))
 
     @patch("builtins.input", side_effect=[
-        "modificar",
-        "1101",
-        "9000.00",
-        "fin",
-        "s",  # Cuadrar capital
-        "n",  # No exportar txt
+        "4",        # Opción 4: Modificar monto de cuenta
+        "1101",     # Código de cuenta a modificar
+        "9000.00",  # Nuevo monto
+        "6",        # Opción 6: Finalizar apertura
+        "s",        # Cuadrar capital
+        "n",        # No exportar txt
     ])
     def test_iniciar_flujo_apertura_con_cuentas_iniciales(self, mock_input):
-        """Verifica que iniciar_flujo_apertura precargue las cuentas y permita modificarlas interactivamente."""
+        """Verifica que iniciar_flujo_apertura precargue las cuentas y permita modificarlas vía menú numerado."""
         from apertura.cli import iniciar_flujo_apertura
         from apertura.models import ItemCuentaApertura
 

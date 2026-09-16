@@ -162,6 +162,30 @@ class TestUIModular(unittest.TestCase):
         sel = ui.seleccionar_coincidencia_interactiva(items, mostrar_feedback=False)
         self.assertIsNone(sel)
 
+    def test_generar_tabla_balance_apertura(self):
+        from apertura.models import ItemCuentaApertura, ResumenBalance
+        caja = ItemCuentaApertura(codigo="1101", nombre="Caja General", monto=Decimal("10000.00"), clase="1. Activo", subgrupo="1.1 Activo Corriente")
+        dep = ItemCuentaApertura(codigo="1205", nombre="Depreciación Acumulada", monto=Decimal("2000.00"), clase="1. Activo", subgrupo="1.2 Activo No Corriente", es_regularizadora=True)
+        cap = ItemCuentaApertura(codigo="3101", nombre="Capital Social", monto=Decimal("8000.00"), clase="3. Capital", subgrupo="3.1 Capital Contable")
+        res = ResumenBalance(
+            total_activo=Decimal("8000.00"),
+            total_pasivo=Decimal("0.00"),
+            total_patrimonio=Decimal("8000.00"),
+            diferencia_capital=Decimal("0.00"),
+            estructura_balance={
+                "1. Activo": {
+                    "1.1 Activo Corriente": {"1101": caja},
+                    "1.2 Activo No Corriente": {"1205": dep},
+                },
+                "3. Capital": {
+                    "3.1 Capital Contable": {"3101": cap},
+                },
+            },
+        )
+        tabla = ui.generar_tabla_balance_apertura(res)
+        self.assertIn("BALANCE DE SITUACIÓN GENERAL DE APERTURA", tabla.title)
+        self.assertEqual(len(tabla.columns), 5)
+
 
 if __name__ == "__main__":
     unittest.main()
