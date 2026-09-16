@@ -84,9 +84,11 @@ class TestDiarioCliYAsistentes(unittest.TestCase):
 
     @patch("builtins.input", side_effect=[
         "2",          # Subopción 2 (manual con flujo de apertura)
+        "1",          # Opción 1 de apertura: Registrar cuentas
         "1101",       # Cuenta Caja
         "5000.00",    # Monto Caja
-        "fin",        # Fin de ingreso de cuentas
+        "",           # Enter vacío para volver al menú de apertura
+        "6",          # Opción 6: Finalizar apertura
         "s",          # Asignar diferencia a Capital
         "",           # Fecha default hoy
     ])

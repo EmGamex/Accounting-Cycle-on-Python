@@ -19,6 +19,7 @@ from ui import (
     imprimir_coincidencias_cuentas,
     imprimir_exito,
     imprimir_menu_opciones,
+    seleccionar_coincidencia_interactiva,
 )
 from .engine import GestorLibroMayor, mayorizar_libro_diario
 from .exceptions import MayorError
@@ -80,16 +81,15 @@ def _consultar_t_grafica_individual(gestor_mayor: GestorLibroMayor) -> None:
         imprimir_alerta(f"No se encontró ninguna cuenta que coincida con '{termino}'.")
         return
 
-    if len(coincidencias) == 1:
-        cuenta = coincidencias[0]
-    else:
-        imprimir_coincidencias_cuentas(coincidencias, limite=len(coincidencias))
-        sel = input("Seleccione el número de cuenta: ").strip()
-        if sel.isdigit() and 1 <= int(sel) <= len(coincidencias):
-            cuenta = coincidencias[int(sel) - 1]
-        else:
-            imprimir_alerta("Selección cancelada.")
-            return
+    cuenta = seleccionar_coincidencia_interactiva(
+        coincidencias,
+        limite=len(coincidencias),
+        mostrar_feedback=False,
+        mensaje_prompt="Seleccione el número de cuenta: ",
+        permitir_reintento=False,
+    )
+    if not cuenta:
+        return
 
     console.print("")
     console.print(generar_tabla_t_grafica(cuenta))

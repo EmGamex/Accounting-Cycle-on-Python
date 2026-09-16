@@ -428,3 +428,90 @@ def generar_tabla_estado_resultados(resumen: Any) -> Table:
 
     return tabla
 
+
+def generar_tabla_balance_apertura(resumen: Any, titulo: Optional[str] = None) -> Table:
+    """Genera una tabla Rich formal para el Balance de Situación General de Apertura (Forma de Reporte a Columnas Clasificadas)."""
+    title_text = titulo or "BALANCE DE SITUACIÓN GENERAL DE APERTURA"
+    tabla = Table(title=title_text, box=BORDE_TABLA, show_footer=True)
+    tabla.add_column("Clasificación / Cuenta", style=COLOR_TEXTO)
+    tabla.add_column("Código", style="dim cyan", no_wrap=True)
+    tabla.add_column("Parcial (Q)", justify="right", style="green", no_wrap=True)
+    tabla.add_column("Subtotal (Q)", justify="right", style="green", no_wrap=True)
+    tabla.add_column("Total Rubro (Q)", justify="right", style="bold green", footer_style="bold green", no_wrap=True)
+
+    # 1. ACTIVO
+    tabla.add_row("[bold cyan]1. ACTIVO[/bold cyan]", "", "", "", "")
+    for clase, subgrupos in getattr(resumen, "estructura_balance", {}).items():
+        if "activo" not in clase.lower():
+            continue
+        for subgrupo, cuentas in subgrupos.items():
+            tabla.add_row(f"  [bold]{subgrupo}[/bold]", "", "", "", "")
+            subtot = Decimal("0.00")
+            for cta in (cuentas.values() if isinstance(cuentas, dict) else cuentas):
+                es_reg = getattr(cta, "es_regularizadora", False)
+                signo = "(-)" if es_reg else "   "
+                tag_reg = " [yellow](-)[/yellow]" if es_reg else ""
+                tabla.add_row(f"    {signo} {cta.nombre}{tag_reg}", cta.codigo, formatear_moneda(cta.monto), "", "")
+                if es_reg:
+                    subtot -= cta.monto
+                else:
+                    subtot += cta.monto
+            tabla.add_row(f"    [italic]Subtotal {subgrupo}[/italic]", "", "", formatear_moneda(subtot), "")
+
+    tabla.add_row("[bold green]TOTAL DEL ACTIVO[/bold green]", "", "", "", f"[bold green]{formatear_moneda(resumen.total_activo)}[/bold green]")
+    tabla.add_row("", "", "", "", "")
+
+    # 2. PASIVO
+    tabla.add_row("[bold cyan]2. PASIVO[/bold cyan]", "", "", "", "")
+    for clase, subgrupos in getattr(resumen, "estructura_balance", {}).items():
+        if "pasivo" not in clase.lower():
+            continue
+        for subgrupo, cuentas in subgrupos.items():
+            tabla.add_row(f"  [bold]{subgrupo}[/bold]", "", "", "", "")
+            subtot = Decimal("0.00")
+            for cta in (cuentas.values() if isinstance(cuentas, dict) else cuentas):
+                es_reg = getattr(cta, "es_regularizadora", False)
+                signo = "(-)" if es_reg else "   "
+                tag_reg = " [yellow](-)[/yellow]" if es_reg else ""
+                tabla.add_row(f"    {signo} {cta.nombre}{tag_reg}", cta.codigo, formatear_moneda(cta.monto), "", "")
+                subtot += cta.monto
+            tabla.add_row(f"    [italic]Subtotal {subgrupo}[/italic]", "", "", formatear_moneda(subtot), "")
+
+    tabla.add_row("[bold green]TOTAL DEL PASIVO[/bold green]", "", "", "", f"[bold green]{formatear_moneda(resumen.total_pasivo)}[/bold green]")
+    tabla.add_row("", "", "", "", "")
+
+    # 3. CAPITAL / PATRIMONIO
+    tabla.add_row("[bold cyan]3. CAPITAL / PATRIMONIO NETO[/bold cyan]", "", "", "", "")
+    for clase, subgrupos in getattr(resumen, "estructura_balance", {}).items():
+        if not any(k in clase.lower() for k in ("capital", "patrimonio")):
+            continue
+        for subgrupo, cuentas in subgrupos.items():
+            tabla.add_row(f"  [bold]{subgrupo}[/bold]", "", "", "", "")
+            subtot = Decimal("0.00")
+            for cta in (cuentas.values() if isinstance(cuentas, dict) else cuentas):
+                es_reg = getattr(cta, "es_regularizadora", False)
+                signo = "(-)" if es_reg else "   "
+                tag_reg = " [yellow](-)[/yellow]" if es_reg else ""
+                tabla.add_row(f"    {signo} {cta.nombre}{tag_reg}", cta.codigo, formatear_moneda(cta.monto), "", "")
+                if es_reg:
+                    subtot -= cta.monto
+                else:
+                    subtot += cta.monto
+            tabla.add_row(f"    [italic]Subtotal {subgrupo}[/italic]", "", "", formatear_moneda(subtot), "")
+
+    tabla.add_row("[bold green]TOTAL PATRIMONIO NETO[/bold green]", "", "", "", f"[bold green]{formatear_moneda(resumen.total_patrimonio)}[/bold green]")
+
+    cuadra = getattr(resumen, "cuadra", False)
+    estilo_pie = "bold green" if cuadra else "bold red"
+    estado_texto = "CUADRADO EXACTO" if cuadra else "DESCUADRADO"
+    tabla.columns[0].footer = f"[{estilo_pie}]TOTAL PASIVO Y PATRIMONIO ({estado_texto}):[/{estilo_pie}]"
+    tabla.columns[4].footer = f"[{estilo_pie}]{formatear_moneda(resumen.total_pasivo_y_patrimonio)}[/{estilo_pie}]"
+
+    return tabla
+
+
+def imprimir_balance_apertura_rich(resumen: Any, titulo: Optional[str] = None) -> None:
+    """Imprime el Balance de Situación General de Apertura formal en consola."""
+    console.print(generar_tabla_balance_apertura(resumen, titulo=titulo))
+
+
