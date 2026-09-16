@@ -236,7 +236,7 @@ def iniciar_flujo_apertura(
     acciones = [
         AccionMenu("Registrar cuentas de apertura", lambda: _registrar_cuentas(motor, catalogo)),
         AccionMenu("Ver cuentas registradas", lambda: mostrar_cuentas_registradas(motor)),
-        AccionMenu("Ver Balance de Situación General de Apertura (Rich)", lambda: _ver_balance_situacion(motor)),
+        AccionMenu("Ver Balance de Situación General de Apertura", lambda: _ver_balance_situacion(motor)),
         AccionMenu("Modificar saldo de una cuenta", lambda: _modificar_monto_cuenta(motor)),
         AccionMenu("Eliminar cuenta registrada", lambda: _eliminar_cuenta(motor)),
         AccionMenu("Finalizar apertura y generar Partida #1", lambda: None),
