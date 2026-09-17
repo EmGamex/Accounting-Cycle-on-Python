@@ -120,6 +120,7 @@ class TestDiarioCliYAsistentes(unittest.TestCase):
     @patch("builtins.input", side_effect=[
         "Compra de suministros",  # Glosa
         "FAC-999",               # Doc
+        "1",                     # Modalidad: 1 con IVA incluido
         "1120.00",               # Total factura
         "5201",                  # Cuenta gasto
         "",                      # Fecha (hoy)
@@ -136,9 +137,10 @@ class TestDiarioCliYAsistentes(unittest.TestCase):
     @patch("builtins.input", side_effect=[
         "Venta de mercaderías",   # Glosa
         "FEL-1234",              # Doc
+        "1",                     # Modalidad: 1 con IVA incluido
         "2240.00",               # Total venta
         "",                      # Fecha (hoy)
-        "3",                     # Mixto
+        "3",                     # Mixto estándar
         "50",                    # 50% transferencia
     ])
     def test_registrar_venta_asistida_mixto(self, mock_input):
@@ -147,6 +149,26 @@ class TestDiarioCliYAsistentes(unittest.TestCase):
         self.assertIsNotNone(partida)
         self.assertTrue(partida.cuadra)
         self.assertEqual(partida.total_haber, Decimal("2240.00"))
+
+    @patch("builtins.input", side_effect=[
+        "Venta de mercadería letras", # Glosa
+        "FEL-555",                   # Doc
+        "2",                         # Modalidad: 2 Más IVA
+        "15000.00",                  # Neto
+        "",                          # Fecha hoy
+        "4",                         # Opción 4: Multicanal
+        "25",                        # 25% Banco
+        "0",                         # 0% Caja
+        "25",                        # 25% Crédito
+        "50",                        # 50% Letras/Docs
+    ])
+    def test_registrar_venta_asistida_multicanal_letras_mas_iva(self, mock_input):
+        gestor = GestorLibroDiario(estricto_cronologico=False)
+        partida = registrar_venta_asistida(gestor)
+        self.assertIsNotNone(partida)
+        self.assertTrue(partida.cuadra)
+        self.assertEqual(partida.total_debe, Decimal("16800.00"))
+        self.assertEqual(partida.total_haber, Decimal("16800.00"))
 
     @patch("builtins.input", side_effect=[
         "1",         # Opción 1: Cobro cliente

@@ -69,6 +69,15 @@ SINONIMOS = {
     "capital": "capital social",
     "depreciacion": "depreciacion acumulada",
     "vehiculo": "vehiculos",
+    "letra": "documentos por cobrar a corto plazo",
+    "letras": "documentos por cobrar a corto plazo",
+    "letras de cambio": "documentos por cobrar a corto plazo",
+    "documentos por cobrar": "documentos por cobrar a corto plazo",
+    "documentos por pagar": "documentos por pagar a corto plazo",
+    "letras por pagar": "documentos por pagar a corto plazo",
+    "letras por cobrar": "documentos por cobrar a corto plazo",
+    "pagare": "documentos por cobrar a corto plazo",
+    "pagares": "documentos por cobrar a corto plazo",
 }
 
 
@@ -104,6 +113,7 @@ class Cuenta(StrEnum):
     ANTICIPOS_SUELDOS = "1111"
     ALQUILERES_ANTICIPADOS = "1112"
     SEGUROS_ANTICIPADOS = "1113"
+    DOCS_COBRAR_CP = "1114"
 
     # 1.2 Activo No Corriente
     TERRENOS = "1201"
@@ -135,6 +145,7 @@ class Cuenta(StrEnum):
     ACREEDORES = "2106"
     INTERESES_POR_PAGAR = "2107"
     PROVISIONES_LABORALES = "2108"
+    DOCS_POR_PAGAR_CP = "2109"
 
     # 2.2 Pasivo No Corriente
     ACREEDORES_HIPOTECARIOS = "2201"
@@ -198,6 +209,7 @@ catalogo_cuentas: Dict[str, Dict[str, Dict[str, str]]] = {
             Cuenta.ANTICIPOS_SUELDOS: "Anticipos sobre Sueldos a Empleados",
             Cuenta.ALQUILERES_ANTICIPADOS: "Alquileres Pagados por Anticipado",
             Cuenta.SEGUROS_ANTICIPADOS: "Seguros Pagados por Anticipado",
+            Cuenta.DOCS_COBRAR_CP: "Documentos por Cobrar a Corto Plazo",
         },
         "1.2 Activo No Corriente": {
             Cuenta.TERRENOS: "Terrenos",
@@ -231,6 +243,7 @@ catalogo_cuentas: Dict[str, Dict[str, Dict[str, str]]] = {
             Cuenta.ACREEDORES: "Acreedores",
             Cuenta.INTERESES_POR_PAGAR: "Intereses por Pagar",
             Cuenta.PROVISIONES_LABORALES: "Provisiones para Prestaciones Laborales (Aguinaldo, Bono 14, Vacaciones)",
+            Cuenta.DOCS_POR_PAGAR_CP: "Documentos por Pagar a Corto Plazo",
         },
         "2.2 Pasivo No Corriente": {
             Cuenta.ACREEDORES_HIPOTECARIOS: "Acreedores Hipotecarios",

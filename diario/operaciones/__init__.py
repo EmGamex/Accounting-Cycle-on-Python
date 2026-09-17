@@ -5,6 +5,7 @@ from .calculos import (
     TASA_IVA,
     TWO_PLACES,
     calcular_desglose_iva,
+    calcular_iva_desde_base,
     distribuir_canales,
     normalizar_porcentaje,
 )
@@ -40,6 +41,7 @@ __all__ = [
     "FACTOR_BASE",
     "normalizar_porcentaje",
     "calcular_desglose_iva",
+    "calcular_iva_desde_base",
     "distribuir_canales",
     # Partidas simples
     "crear_partida_simple",
