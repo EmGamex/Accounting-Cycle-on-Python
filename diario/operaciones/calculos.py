@@ -18,7 +18,7 @@ def normalizar_porcentaje(valor: Decimal | float | int | str) -> Decimal:
 
 
 def calcular_desglose_iva(total_bruto: Decimal) -> Tuple[Decimal, Decimal]:
-    """Calcula base imponible y el IVA (12%) garantizando cuadre exacto al centavo."""
+    """Calcula base imponible y el IVA (12%) garantizando cuadre exacto al centavo a partir del total con IVA."""
     if not isinstance(total_bruto, Decimal):
         total_bruto = Decimal(str(total_bruto))
 
@@ -26,6 +26,17 @@ def calcular_desglose_iva(total_bruto: Decimal) -> Tuple[Decimal, Decimal]:
     base = (total / FACTOR_BASE).quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
     iva = (total - base).quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
     return base, iva
+
+
+def calcular_iva_desde_base(monto_neto: Decimal) -> Tuple[Decimal, Decimal, Decimal]:
+    """Calcula el IVA (12%) y el total bruto garantizando cuadre exacto a partir de un importe neto ('más IVA')."""
+    if not isinstance(monto_neto, Decimal):
+        monto_neto = Decimal(str(monto_neto))
+
+    base = monto_neto.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+    iva = (base * TASA_IVA).quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+    total = (base + iva).quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+    return base, iva, total
 
 
 def distribuir_canales(

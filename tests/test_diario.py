@@ -348,6 +348,66 @@ class TestOperacionesComercialesYReportes(unittest.TestCase):
         self.assertEqual(lineas_dict["5102"], Decimal("8928.57"))  # Base compra
         self.assertEqual(lineas_dict["1107"], Decimal("1071.43"))  # IVA Crédito Fiscal
 
+    def test_partida_venta_multicanal_con_letras_y_mas_iva(self):
+        """Caso real: Venta de Q15,000 + IVA, 25% cheque, 25% crédito, 50% letras a 60 días."""
+        from diario.operaciones import calcular_iva_desde_base
+        base, iva, total = calcular_iva_desde_base(Decimal("15000.00"))
+        self.assertEqual(base, Decimal("15000.00"))
+        self.assertEqual(iva, Decimal("1800.00"))
+        self.assertEqual(total, Decimal("16800.00"))
+
+        pda = crear_partida_venta(
+            numero=1,
+            fecha=date(2026, 1, 3),
+            glosa="Venta de mercadería 25% cheque, 25% crédito, 50% 2 letras de cambio a 60 días",
+            total_factura=total,
+            pct_banco=Decimal("0.25"),
+            pct_credito=Decimal("0.25"),
+            pct_documentos=Decimal("0.50"),
+            documento_soporte="FEL-123",
+        )
+        self.assertTrue(pda.cuadra)
+        self.assertEqual(pda.total_debe, Decimal("16800.00"))
+        self.assertEqual(pda.total_haber, Decimal("16800.00"))
+        self.assertEqual(len(pda.lineas), 5)
+
+        lineas_dict = {l.codigo: l.monto for l in pda.lineas}
+        self.assertEqual(lineas_dict["1102"], Decimal("4200.00"))  # Bancos / Cheque (25%)
+        self.assertEqual(lineas_dict["1103"], Decimal("4200.00"))  # Clientes (25%)
+        self.assertEqual(lineas_dict["1114"], Decimal("8400.00"))  # Documentos por Cobrar (50%)
+        self.assertEqual(lineas_dict["4101"], Decimal("15000.00")) # Ventas (Base)
+        self.assertEqual(lineas_dict["2105"], Decimal("1800.00"))  # IVA Débito Fiscal
+
+        self.gestor.registrar_partida(pda)
+
+    def test_partida_compra_multicanal_con_letras_iva_incluido(self):
+        """Caso real: Compra de Q22,400 IVA incluido, 25% contado, 25% crédito, 50% letras a 90 días."""
+        pda = crear_partida_compra(
+            numero=1,
+            fecha=date(2026, 1, 7),
+            glosa="Compra de mercadería 25% contado, 25% crédito, 50% letras de cambio a 90 días",
+            total_factura=Decimal("22400.00"),
+            codigo_gasto="1104",
+            nombre_gasto="Inventario de Mercancías",
+            pct_banco=Decimal("0.25"),
+            pct_proveedores=Decimal("0.25"),
+            pct_documentos=Decimal("0.50"),
+            documento_soporte="FAC-777",
+        )
+        self.assertTrue(pda.cuadra)
+        self.assertEqual(pda.total_debe, Decimal("22400.00"))
+        self.assertEqual(pda.total_haber, Decimal("22400.00"))
+        self.assertEqual(len(pda.lineas), 5)
+
+        lineas_dict = {l.codigo: l.monto for l in pda.lineas}
+        self.assertEqual(lineas_dict["1104"], Decimal("20000.00")) # Mercaderías (Base)
+        self.assertEqual(lineas_dict["1107"], Decimal("2400.00"))  # IVA Crédito Fiscal
+        self.assertEqual(lineas_dict["1102"], Decimal("5600.00"))  # Bancos (25%)
+        self.assertEqual(lineas_dict["2101"], Decimal("5600.00"))  # Proveedores (25%)
+        self.assertEqual(lineas_dict["2109"], Decimal("11200.00")) # Documentos por Pagar (50%)
+
+        self.gestor.registrar_partida(pda)
+
     def test_partida_simple(self):
         pda_simple = crear_partida_simple(
             numero=1,

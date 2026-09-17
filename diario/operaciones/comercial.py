@@ -16,10 +16,12 @@ def crear_partida_venta(
     pct_efectivo: Decimal = Decimal("0.00"),
     pct_banco: Decimal = Decimal("0.00"),
     pct_credito: Decimal = Decimal("0.00"),
+    pct_documentos: Decimal = Decimal("0.00"),
     # O montos explícitos
     monto_efectivo: Optional[Decimal] = None,
     monto_banco: Optional[Decimal] = None,
     monto_credito: Optional[Decimal] = None,
+    monto_documentos: Optional[Decimal] = None,
     # Cuentas configurables
     codigo_efectivo: str = "1101",
     nombre_efectivo: str = "Caja General",
@@ -27,6 +29,8 @@ def crear_partida_venta(
     nombre_banco: str = "Bancos (Moneda Nacional)",
     codigo_credito: str = "1103",
     nombre_credito: str = "Cuentas por Cobrar Clientes",
+    codigo_documentos: str = "1114",
+    nombre_documentos: str = "Documentos por Cobrar a Corto Plazo",
     # Ingreso e IVA
     codigo_ingreso: str = "4101",
     nombre_ingreso: str = "Ventas de Mercancías",
@@ -37,7 +41,7 @@ def crear_partida_venta(
     nombre_cobro: Optional[str] = None,
     documento_soporte: Optional[str] = None,
 ) -> PartidaDiario:
-    """Genera una partida de venta con desglose automático de IVA (12%) y cobro (contado/crédito/bancos)."""
+    """Genera una partida de venta con desglose automático de IVA (12%) y cobro (contado/crédito/bancos/documentos)."""
     base, iva = calcular_desglose_iva(total_factura)
 
     # Definir canales de cobro
@@ -48,8 +52,8 @@ def crear_partida_venta(
         canales.append((codigo_cobro, nom_c, Decimal("1.00"), None))
     else:
         hay_distribucion = (
-            pct_efectivo > 0 or pct_banco > 0 or pct_credito > 0 or
-            monto_efectivo is not None or monto_banco is not None or monto_credito is not None
+            pct_efectivo > 0 or pct_banco > 0 or pct_credito > 0 or pct_documentos > 0 or
+            monto_efectivo is not None or monto_banco is not None or monto_credito is not None or monto_documentos is not None
         )
         if not hay_distribucion:
             # Por defecto 100% Caja General
@@ -58,6 +62,7 @@ def crear_partida_venta(
             canales.append((codigo_efectivo, nombre_efectivo, pct_efectivo, monto_efectivo))
             canales.append((codigo_banco, nombre_banco, pct_banco, monto_banco))
             canales.append((codigo_credito, nombre_credito, pct_credito, monto_credito))
+            canales.append((codigo_documentos, nombre_documentos, pct_documentos, monto_documentos))
 
     cobros = distribuir_canales(total_factura, canales)
 
@@ -91,10 +96,12 @@ def crear_partida_compra(
     pct_efectivo: Decimal = Decimal("0.00"),
     pct_banco: Decimal = Decimal("0.00"),
     pct_proveedores: Decimal = Decimal("0.00"),
+    pct_documentos: Decimal = Decimal("0.00"),
     # O montos explícitos
     monto_efectivo: Optional[Decimal] = None,
     monto_banco: Optional[Decimal] = None,
     monto_proveedores: Optional[Decimal] = None,
+    monto_documentos: Optional[Decimal] = None,
     # Cuentas configurables
     codigo_efectivo: str = "1101",
     nombre_efectivo: str = "Caja General",
@@ -102,6 +109,8 @@ def crear_partida_compra(
     nombre_banco: str = "Bancos (Moneda Nacional)",
     codigo_proveedores: str = "2101",
     nombre_proveedores: str = "Proveedores Locales",
+    codigo_documentos: str = "2109",
+    nombre_documentos: str = "Documentos por Pagar a Corto Plazo",
     # IVA
     codigo_iva: str = "1107",
     nombre_iva: str = "Crédito Fiscal",
@@ -121,8 +130,8 @@ def crear_partida_compra(
         canales.append((codigo_pago, nom_p, Decimal("1.00"), None))
     else:
         hay_distribucion = (
-            pct_efectivo > 0 or pct_banco > 0 or pct_proveedores > 0 or
-            monto_efectivo is not None or monto_banco is not None or monto_proveedores is not None
+            pct_efectivo > 0 or pct_banco > 0 or pct_proveedores > 0 or pct_documentos > 0 or
+            monto_efectivo is not None or monto_banco is not None or monto_proveedores is not None or monto_documentos is not None
         )
         if not hay_distribucion:
             # Por defecto 100% Bancos
@@ -131,6 +140,7 @@ def crear_partida_compra(
             canales.append((codigo_efectivo, nombre_efectivo, pct_efectivo, monto_efectivo))
             canales.append((codigo_banco, nombre_banco, pct_banco, monto_banco))
             canales.append((codigo_proveedores, nombre_proveedores, pct_proveedores, monto_proveedores))
+            canales.append((codigo_documentos, nombre_documentos, pct_documentos, monto_documentos))
 
     pagos = distribuir_canales(total_factura, canales)
 

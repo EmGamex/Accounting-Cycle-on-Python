@@ -2,6 +2,7 @@
 from typing import Any, Callable, NamedTuple, Optional
 
 from diario.asistentes import (
+    registrar_apertura_asistida,
     registrar_compra_asistida,
     registrar_operacion_simple_asistida,
     registrar_partida_libre_asistida,
@@ -267,6 +268,7 @@ def _ejecutar_submenu(titulo_menu: str, acciones: list[AccionMenu], gestor: Gest
 def _submenu_registro_operaciones(gestor: GestorLibroDiario) -> None:
     """Submenú especializado en el asiento de transacciones comerciales y operativas."""
     acciones = [
+        AccionMenu("Registrar Partida No. 1 (Balance de Apertura e Inventario)", registrar_apertura_asistida),
         AccionMenu("Registrar Compra / Gasto con IVA (Crédito Fiscal 12%)", registrar_compra_asistida),
         AccionMenu("Registrar Venta con IVA (Débito Fiscal 12%)", registrar_venta_asistida),
         AccionMenu("Registrar Operación Simple (Cobro a Clientes, Pago a Proveedores, Depósitos)", registrar_operacion_simple_asistida),
